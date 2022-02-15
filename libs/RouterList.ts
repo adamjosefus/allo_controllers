@@ -3,10 +3,10 @@
  */
 
 
-import { RouterList as RouterListParent, type RouterOptions } from "https://deno.land/x/allo_routing@v1.0.1/mod.ts";
+import { RouterList as SuperRouterList, type RouterOptions } from "https://deno.land/x/allo_routing@v1.0.1/mod.ts";
 
 
-export class RouterList extends RouterListParent {
+export class RouterList extends SuperRouterList {
 
     constructor(options?: RouterOptions) {
         super(options);
