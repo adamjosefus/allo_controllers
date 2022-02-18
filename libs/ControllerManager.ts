@@ -5,13 +5,7 @@
 
 import { Cache } from "https://deno.land/x/allo_caching@v1.0.2/mod.ts";
 import { Controller } from "./Controller.ts";
-
-
-export class ChangeCase {
-    static firstLower(str: string): string {
-        return str.substring(0, 1).toLowerCase() + str.substring(1);
-    }
-}
+import { firstLower } from "./helper/changeCase.ts";
 
 
 type EndpointResultType = Promise<void | Response> | void | Response;
@@ -133,7 +127,7 @@ export class ControllerManager {
                 if (!match || !match.groups) return;
 
                 const type = match.groups.type;
-                const name = ChangeCase.firstLower(match.groups.name);
+                const name = firstLower(match.groups.name);
 
                 switch (type) {
                     case "inject": methods.inject.set(name, fce); return;
