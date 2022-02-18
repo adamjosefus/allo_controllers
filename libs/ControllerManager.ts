@@ -65,7 +65,7 @@ export class ControllerManager {
     }
 
 
-    async #importClass(name: string): Promise<{ new(): Controller }> {
+    async #importClassObject(name: string): Promise<{ new(): Controller }> {
         const path = this.#computePath(name);
         const className = this.#computeClassName(name);
 
@@ -76,7 +76,7 @@ export class ControllerManager {
     }
 
 
-    async #getClass(name: string): Promise<{ new(): Controller }> {
+    async #getClassObject(name: string): Promise<{ new(): Controller }> {
         // Load from cache
         const cache = this.#classCache;
         const cacheKey = name;
@@ -84,7 +84,7 @@ export class ControllerManager {
         if (cache.has(cacheKey)) return cache.get(cacheKey)!;
 
         // Load from file
-        const classObject = await this.#importClass(name);
+        const classObject = await this.#importClassObject(name);
 
         // Save to cache
         cache.set(cacheKey, classObject);
@@ -93,9 +93,9 @@ export class ControllerManager {
     }
 
 
-    async #hasClass(name: string): Promise<boolean> {
+    async #hasClassObject(name: string): Promise<boolean> {
         try {
-            await this.#getClass(name);
+            await this.#getClassObject(name);
             return true;
 
         } catch (_error) {
@@ -162,7 +162,7 @@ export class ControllerManager {
 
 
     async #createInstance(name: string): Promise<Controller> {
-        const classObject = await this.#getClass(name);
+        const classObject = await this.#getClassObject(name);
         const instance = new classObject();
 
         return instance;
@@ -170,7 +170,7 @@ export class ControllerManager {
 
 
     async matchController(controller: string): Promise<boolean> {
-        return await this.#hasClass(controller)
+        return await this.#hasClassObject(controller)
     }
 
 
