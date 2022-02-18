@@ -34,13 +34,13 @@ const regex = {
 
 
 export class ControllerManager {
-    readonly defaultControllerFallback = 'Homepage';
-    readonly defaultActionFallback = 'default';
-
     #dir: string;
 
     readonly #classCache: Cache<{ new(): Controller }> = new Cache();
     readonly #methodsCache: Cache<ControllerMethodsType> = new Cache();
+
+    readonly defaultControllerFallback = 'Homepage';
+    readonly defaultActionFallback = 'default';
 
 
     constructor(dir: string) {
