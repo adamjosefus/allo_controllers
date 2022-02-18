@@ -3,7 +3,11 @@
  */
 
 
-import { RouterList as SuperRouterList, type RouterOptions } from "https://deno.land/x/allo_routing@v1.0.1/mod.ts";
+import {
+    RouterList as SuperRouterList,
+    type RouterOptions,
+    type ServeResponseType,
+} from "https://deno.land/x/allo_routing@v1.0.2/mod.ts";
 import { ControllerManager } from "./ControllerManager.ts";
 
 
@@ -16,6 +20,15 @@ export class RouterList extends SuperRouterList {
         super(options);
 
         this.#manager = manager;
+    }
+
+
+    addController(mask: string, meta: string): void {
+        const serveResponse: ServeResponseType = async (req: Request, params: Record<string, string>) => {
+            return await this.#manager.createResponse(meta, req, params);
+        }
+
+        this.add(mask, serveResponse);
     }
 
 }
