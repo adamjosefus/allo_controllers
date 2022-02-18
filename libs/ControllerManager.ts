@@ -4,16 +4,16 @@
 
 
 import { Cache } from "https://deno.land/x/allo_caching@v1.0.2/mod.ts";
-import { Controller } from "./Controller.ts";
-import { firstLower } from "./helper/changeCase.ts";
+import { Controller as AbstractController } from "./Controller.ts";
+import { firstLower, firstUpper } from "./helper/changeCase.ts";
 
 
-type EndpointResultType = Promise<void | Response> | void | Response;
+type EndpointResultType = Promise<void | Response> | void | Response | unknown;
 
 type InjectMethodType<instanceObject = unknown> = (instance: instanceObject) => void;
 type StartupMethodType = () => EndpointResultType;
 type ViewActionMethodType = () => EndpointResultType;
-type BeforeRenderMethodType = () => void;
+type BeforeRenderMethodType = () => EndpointResultType;
 type ViewRenderMethodType = () => EndpointResultType;
 
 
@@ -31,6 +31,9 @@ const regex = {
     className: new RegExp(`^[A-Z][a-zA-Z0-9]*${classSuffix}$`),
     magicMethod: /^(?<type>inject|action|render)(?<name>[A-Z][a-zA-Z0-9]*)$/,
 }
+
+
+class Controller extends AbstractController { }
 
 
 export class ControllerManager {
@@ -70,7 +73,7 @@ export class ControllerManager {
     }
 
 
-    async #getClassObject(name: string): Promise<{ new(): Controller }> {
+    async #getClassObject(name: string): Promise<typeof Controller> {
         // Load from cache
         const cacheKey = name;
 
@@ -145,59 +148,69 @@ export class ControllerManager {
     }
 
 
-    async #createInstance(name: string): Promise<Controller> {
+    async #createInstance(name: string, request: Request): Promise<Controller> {
         const classObject = await this.#getClassObject(name);
-        const instance = new classObject();
+        const instance = new classObject(request);
 
         return instance;
     }
 
 
-    async #matchController(controller: string): Promise<boolean> {
-        return await this.#hasClassObject(controller)
+    // async #matchController(controller: string): Promise<boolean> {
+    //     return await this.#hasClassObject(controller)
+    // }
+
+
+    // async #matchView(controller: string, view: string): Promise<boolean> {
+    //     const instance = await this.#createInstance(controller);
+    //     const methods = this.#parseMethods(instance);
+
+    //     const hasAction = methods.action.get(view) !== undefined;
+    //     const hasRender = methods.render.get(view) !== undefined;
+
+    //     return hasAction || hasRender;
+    // }
+
+
+    #parseMeta(meta: string) {
+        const [controller, view] = meta.split(":");
+
+        return {
+            controller: firstUpper(controller),
+            view: firstLower(view),
+        };
     }
 
 
-    async #matchView(controller: string, view: string): Promise<boolean> {
-        const instance = await this.#createInstance(controller);
-        const methods = this.#parseMethods(instance);
+    async createResponse(meta: string, req: Request, params: Record<string, string>): Promise<Response> {
+        const { controller, view } = this.#parseMeta(meta);
 
-        const hasAction = methods.action.get(view) !== undefined;
-        const hasRender = methods.render.get(view) !== undefined;
-
-        return hasAction || hasRender;
-    }
-
-
-    async createResponse(controller: string, view: string): Promise<Response> {
-        const instance = this.#createInstance(controller);
+        const instance = await this.#createInstance(controller, req);
         const methods = this.#parseMethods(instance);
 
         // TODO: call inject methods
 
         if (methods.startup) {
-            const result = await methods.startup();
-
-            if (result instanceof Response) return result;
+            const exit = await methods.startup();
+            if (exit instanceof Response) return exit;
         }
 
         // TODO: build arguments
-        const args = [];
 
         if (methods.action.has(view)) {
-            const result = methods.action.get(view)!();
+            const exit = methods.action.get(view)!();
+            if (exit instanceof Response) return exit;
+        }
 
-            if (result instanceof Response) return result;
+        if (methods.beforeRender) {
+            const exit = await methods.beforeRender();
+            if (exit instanceof Response) return exit;
         }
 
 
-        if (methods.beforeRender) methods.beforeRender();
-
-
         if (methods.render.has(view)) {
-            const result = methods.action.get(view)!();
-
-            if (result instanceof Response) return result;
+            const exit = methods.action.get(view)!();
+            if (exit instanceof Response) return exit;
         }
 
 
