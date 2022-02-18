@@ -5,7 +5,10 @@
 
 export abstract class Controller {
 
-    constructor() {
+    readonly #request: Request;
+
+    constructor(request: Request) {
+        this.#request = request;
     }
 
 }
