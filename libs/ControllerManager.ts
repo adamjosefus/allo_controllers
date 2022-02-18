@@ -153,12 +153,12 @@ export class ControllerManager {
     }
 
 
-    async matchController(controller: string): Promise<boolean> {
+    async #matchController(controller: string): Promise<boolean> {
         return await this.#hasClassObject(controller)
     }
 
 
-    async matchView(controller: string, view: string): Promise<boolean> {
+    async #matchView(controller: string, view: string): Promise<boolean> {
         const instance = await this.#createInstance(controller);
         const methods = this.#parseMethods(instance);
 
@@ -169,7 +169,7 @@ export class ControllerManager {
     }
 
 
-    async createViewResponse(controller: string, view: string): Promise<Response> {
+    async createResponse(controller: string, view: string): Promise<Response> {
         const instance = this.#createInstance(controller);
         const methods = this.#parseMethods(instance);
 
