@@ -3,6 +3,7 @@
  */
 
 
+import { Cache } from "https://deno.land/x/allo_caching@v1.0.2/mod.ts";
 import { Controller } from "./Controller.ts";
 
 
@@ -44,9 +45,8 @@ export class ControllerManager {
 
     #dir: string;
 
-    readonly #classCache: Map<string, { new(): Controller }> = new Map();
-    readonly #methodsCache: Map<string, ControllerMethodsType> = new Map();
-
+    readonly #classCache: Cache<{ new(): Controller }> = new Cache();
+    readonly #methodsCache: Cache<ControllerMethodsType> = new Cache();
 
 
     constructor(dir: string) {
@@ -78,16 +78,17 @@ export class ControllerManager {
 
     async #getClassObject(name: string): Promise<{ new(): Controller }> {
         // Load from cache
-        const cache = this.#classCache;
         const cacheKey = name;
 
-        if (cache.has(cacheKey)) return cache.get(cacheKey)!;
+        if (this.#classCache.has(cacheKey)) {
+            return this.#classCache.load(cacheKey)!;
+        }
 
         // Load from file
         const classObject = await this.#importClassObject(name);
 
         // Save to cache
-        cache.set(cacheKey, classObject);
+        this.#classCache.save(cacheKey, classObject);
 
         return classObject;
     }
@@ -104,60 +105,49 @@ export class ControllerManager {
     }
 
 
-
     #parseMethods(controller: Controller): ControllerMethodsType {
-        // Load from cache
-        const cache = this.#methodsCache;
-        const cacheKey = controller.constructor.name;
-        if (cache.has(cacheKey)) return cache.get(cacheKey)!;
+        const parse = (controller: Controller): ControllerMethodsType => {
+            // deno-lint-ignore no-explicit-any
+            const controllerAsAny = controller as any;
 
-        // Process
-        const methods = this.#parseMethods_skipCache(controller);
+            const methods: ControllerMethodsType = {
+                inject: new Map(),
+                action: new Map(),
+                render: new Map(),
+            };
 
-        // Save to cache
-        cache.set(cacheKey, methods);
+            // deno-lint-ignore no-explicit-any
+            const methodNames = Object.getOwnPropertyNames(Object.getPrototypeOf(controllerAsAny)).filter(property => typeof (controllerAsAny as any)[property] === "function");
 
-        return methods;
-    }
+            methodNames.forEach(methodName => {
+                const fce = controllerAsAny[methodName];
 
+                switch (methodName) {
+                    case "startup": methods.startup = fce; return;
+                    case "beforeRender": methods.beforeRender = fce; return;
+                }
 
-    #parseMethods_skipCache(controller: Controller): ControllerMethodsType {
-        // deno-lint-ignore no-explicit-any
-        const controllerAsAny = controller as any;
+                regex.magicMethod.lastIndex = 0;
+                const match = regex.magicMethod.exec(methodName);
 
-        const methods: ControllerMethodsType = {
-            inject: new Map(),
-            action: new Map(),
-            render: new Map(),
-        };
+                if (!match || !match.groups) return;
 
-        // deno-lint-ignore no-explicit-any
-        const methodNames = Object.getOwnPropertyNames(Object.getPrototypeOf(controllerAsAny)).filter(property => typeof (controllerAsAny as any)[property] === "function");
+                const type = match.groups.type;
+                const name = ChangeCase.firstLower(match.groups.name);
 
-        methodNames.forEach(methodName => {
-            const fce = controllerAsAny[methodName];
+                switch (type) {
+                    case "inject": methods.inject.set(name, fce); return;
+                    case "action": methods.action.set(name, fce); return;
+                    case "render": methods.render.set(name, fce); return;
+                }
+            });
 
-            switch (methodName) {
-                case "startup": methods.startup = fce; return;
-                case "beforeRender": methods.beforeRender = fce; return;
-            }
+            return methods;
+        }
 
-            regex.magicMethod.lastIndex = 0;
-            const match = regex.magicMethod.exec(methodName);
-
-            if (!match || !match.groups) return;
-
-            const type = match.groups.type;
-            const name = ChangeCase.firstLower(match.groups.name);
-
-            switch (type) {
-                case "inject": methods.inject.set(name, fce); return;
-                case "action": methods.action.set(name, fce); return;
-                case "render": methods.render.set(name, fce); return;
-            }
+        return this.#methodsCache.load(controller.constructor.name, () => {
+            return parse(controller);
         });
-
-        return methods;
     }
 
 
