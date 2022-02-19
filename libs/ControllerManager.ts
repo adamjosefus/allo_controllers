@@ -22,17 +22,17 @@ type ViewRenderMethodType = (params: Record<string, string>) => void | Promise<v
 
 // Methods Callers
 // deno-lint-ignore no-explicit-any
-type MethodCallerType<F extends (...args: any[]) => unknown> = (instance: Controller) => ReturnType<F>;
+type MethodCallerType<F extends (...args: any[]) => unknown> = (controller: Controller) => ReturnType<F>;
 
 // deno-lint-ignore no-explicit-any
-type MethodWithArgsCallerType<F extends (...args: any[]) => unknown, A extends unknown[]> = (instance: Controller, ...args: A) => ReturnType<F>;
+type MethodWithArgsCallerType<F extends (...args: any[]) => unknown, A extends unknown[]> = (controller: Controller, ...args: A) => ReturnType<F>;
 
 
 type MethodSetType = {
     startup?: MethodCallerType<StartupMethodType>,
     shutdown?: MethodCallerType<ShutdownMethodType>,
     beforeRender?: MethodCallerType<BeforeRenderMethodType>,
-    inject: Map<string, MethodCallerType<InjectMethodType>>,
+    inject: Map<string, MethodWithArgsCallerType<InjectMethodType, [instance: unknown]>>,
     action: Map<string, MethodWithArgsCallerType<ViewActionMethodType, [Record<string, string>]>>,
     render: Map<string, MethodWithArgsCallerType<ViewRenderMethodType, [Record<string, string>]>>,
 }
@@ -48,6 +48,7 @@ export class ControllerManager {
     }
 
     #dir: string;
+    #dependecies: Map<string, unknown> = new Map();
 
     readonly #classCache: Cache<{ new(): Controller }> = new Cache();
     readonly #methodSetCache: Cache<MethodSetType> = new Cache();
@@ -58,6 +59,21 @@ export class ControllerManager {
 
     constructor(dir: string) {
         this.#dir = dir;
+    }
+
+
+    // deno-lint-ignore ban-types
+    addDependency(name: string, object: Object): void {
+        const cleanName = firstLower(name);
+
+        console.log(">> cleanName", cleanName);
+        
+
+        if (this.#dependecies.has(cleanName)) {
+            throw new Error("Name already exists");
+        }
+
+        this.#dependecies.set(cleanName, object);
     }
 
 
@@ -112,6 +128,7 @@ export class ControllerManager {
 
 
     #createMethodSet(controller: Controller): MethodSetType {
+        // TODO: This solution is realy stupid. Change it
         function createStartupCaller(method: string) {
             return (instance: Controller): ReturnType<StartupMethodType> => {
                 // deno-lint-ignore no-explicit-any
@@ -119,6 +136,7 @@ export class ControllerManager {
             }
         }
 
+        // TODO: This solution is realy stupid. Change it
         function createShutdownCaller(method: string) {
             return (instance: Controller): ReturnType<ShutdownMethodType> => {
                 // deno-lint-ignore no-explicit-any
@@ -126,6 +144,7 @@ export class ControllerManager {
             }
         }
 
+        // TODO: This solution is realy stupid. Change it
         function createBeforeRenderCaller(method: string) {
             return (instance: Controller): ReturnType<StartupMethodType> => {
                 // deno-lint-ignore no-explicit-any
@@ -133,13 +152,15 @@ export class ControllerManager {
             }
         }
 
+        // TODO: This solution is realy stupid. Change it
         function createInjectCaller(method: string) {
-            return (instance: Controller): ReturnType<InjectMethodType> => {
+            return (instance: Controller, dependency: unknown): ReturnType<InjectMethodType> => {
                 // deno-lint-ignore no-explicit-any
-                (instance as any)[method]();
+                (instance as any)[method](dependency);
             }
         }
 
+        // TODO: This solution is realy stupid. Change it
         function createViewActionCaller(method: string) {
             return (instance: Controller, params: Record<string, string>): ReturnType<ViewActionMethodType> => {
                 // deno-lint-ignore no-explicit-any
@@ -147,6 +168,7 @@ export class ControllerManager {
             }
         }
 
+        // TODO: This solution is realy stupid. Change it
         function createViewRenderCaller(method: string) {
             return (instance: Controller, params: Record<string, string>): ReturnType<ViewRenderMethodType> => {
                 // deno-lint-ignore no-explicit-any
@@ -256,6 +278,13 @@ export class ControllerManager {
         try {
             // TODO: build arguments
             // TODO: call inject methods
+
+            for (const [name, fce] of methods.inject) {
+                console.log(">> inject", name);
+                
+                fce(instance, this.#dependecies.get(name));
+            }
+
 
             if (methods.startup) {
                 const fce = methods.startup;
