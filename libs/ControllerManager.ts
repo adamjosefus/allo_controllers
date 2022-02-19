@@ -140,8 +140,6 @@ export class ControllerManager {
         }
 
         methodNames.forEach(methodName => {
-            const fce = controllerAsAny[methodName];
-
             switch (methodName) {
                 case 'startup':
                     methods.startup = createCallback(methodName);
