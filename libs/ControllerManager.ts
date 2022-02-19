@@ -268,14 +268,14 @@ export class ControllerManager {
             if (!(error instanceof ControllerExit)) throw new error;
 
             const exit = error as ControllerExit;
-            const exitValue = exit.getValue();
+            const output = exit.getOutput();
 
-            if (exitValue instanceof Response) {
-                return exitValue;
+            if (output instanceof Response) {
+                return output;
             }
 
-            console.log("Unknown exit value", exitValue);
-            throw new Error("Unknown exit value");
+            console.log("Unknown exit output", output);
+            throw new Error("Unknown exit output");
         }
 
         throw new Error("View not found");
