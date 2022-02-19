@@ -3,6 +3,7 @@
  */
 
 
+import { readableStreamFromReader } from "https://deno.land/std@0.126.0/streams/mod.ts";
 import { Status } from "https://deno.land/x/allo_routing@v1.1.2/mod.ts";
 import { ControllerExit } from "./ControllerExit.ts";
 
@@ -81,6 +82,30 @@ export abstract class Controller extends EventTarget implements ControllerInterf
         });
 
         this.sendResponse(response);
+    }
+
+
+    sendFile(...values: [path: string] | [file: File] | [file: Deno.FsFile]): void {
+        const [entry] = values;
+
+        if (entry instanceof File) {
+            const body = entry.stream();
+            const response = new Response(body);
+
+            this.sendResponse(response);
+            return;
+        }
+
+        if (entry instanceof Deno.FsFile) {
+            const body = readableStreamFromReader(entry);
+            const response = new Response(body);
+
+            this.sendResponse(response);
+            return;
+        }
+
+        const file = Deno.openSync(entry, { read: true });
+        this.sendFile(file);
     }
 
 
