@@ -7,12 +7,43 @@ import { Status } from "https://deno.land/x/allo_routing@v1.1.2/mod.ts";
 import { ControllerExit } from "./ControllerExit.ts";
 
 
-export abstract class Controller {
+type SendFileEntry =
+    | [path: string]
+    | [file: File];
+
+
+interface ControllerInterface {
+    addEventListener(
+        type: 'startup' | 'before-render' | 'shutdown',
+        listener: EventListenerOrEventListenerObject,
+        options?: boolean | AddEventListenerOptions,
+    ): void;
+}
+
+
+export abstract class Controller extends EventTarget implements ControllerInterface {
 
     readonly #request: Request;
 
     constructor(request: Request) {
+        super();
+
         this.#request = request;
+    }
+
+
+    startup(): void {
+        this.dispatchEvent(new Event('startup'))
+    }
+
+
+    beforeRender(): void {
+        this.dispatchEvent(new Event('before-render'))
+    }
+
+
+    shutdown(): void {
+        this.dispatchEvent(new Event('shutdown'))
     }
 
 
@@ -22,7 +53,7 @@ export abstract class Controller {
 
 
     sendResponse(response: Response | Promise<Response>): void {
-        throw new ControllerExit(response);
+        throw new ControllerExit(this, response);
     }
 
 
