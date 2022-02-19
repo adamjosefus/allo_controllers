@@ -4,17 +4,19 @@
 
 
 import { Cache } from "https://deno.land/x/allo_caching@v1.0.2/mod.ts";
-import { Controller as AbstractController } from "./Controller.ts";
 import { firstLower, firstUpper } from "./helper/changeCase.ts";
+import { Controller as AbstractController } from "./Controller.ts";
+import { ControllerExit } from "./ControllerExit.ts";
 
 
-type EndpointResultType = Promise<void | Response> | void | Response | unknown;
+// type Promisable<T> = T | Promise<T>;
+// type ExitType = Promisable<Response | Deno.FsFile | File | string | number | void | unknown>;
 
 type InjectMethodType<instanceObject = unknown> = (instance: instanceObject) => void;
-type StartupMethodType = () => EndpointResultType;
-type ViewActionMethodType = () => EndpointResultType;
-type BeforeRenderMethodType = () => EndpointResultType;
-type ViewRenderMethodType = () => EndpointResultType;
+type StartupMethodType = () => void | Promise<void>;
+type ViewActionMethodType = () => void | Promise<void>;
+type BeforeRenderMethodType = () => void | Promise<void>;
+type ViewRenderMethodType = () => void | Promise<void>;
 
 
 type ControllerMethodsType = {
@@ -63,10 +65,10 @@ export class ControllerManager {
 
 
     async #importClassObject(name: string): Promise<{ new(): Controller }> {
-        const path = this.#computePath(name);
         const className = this.#computeClassName(name);
-
+        const path = this.#computePath(name);
         const module = await import(path);
+
         const classObject = module[className] as { new(): Controller };
 
         return classObject;
@@ -103,48 +105,44 @@ export class ControllerManager {
 
 
     #parseMethods(controller: Controller): ControllerMethodsType {
-        const parse = (controller: Controller): ControllerMethodsType => {
-            // deno-lint-ignore no-explicit-any
-            const controllerAsAny = controller as any;
+        const controllerAsAny = controller as any;
 
-            const methods: ControllerMethodsType = {
-                inject: new Map(),
-                action: new Map(),
-                render: new Map(),
-            };
+        console.log("controllerAsAny", controllerAsAny);
 
-            // deno-lint-ignore no-explicit-any
-            const methodNames = Object.getOwnPropertyNames(Object.getPrototypeOf(controllerAsAny)).filter(property => typeof (controllerAsAny as any)[property] === "function");
 
-            methodNames.forEach(methodName => {
-                const fce = controllerAsAny[methodName];
+        const methods: ControllerMethodsType = {
+            inject: new Map(),
+            action: new Map(),
+            render: new Map(),
+        };
 
-                switch (methodName) {
-                    case "startup": methods.startup = fce; return;
-                    case "beforeRender": methods.beforeRender = fce; return;
-                }
+        // deno-lint-ignore no-explicit-any
+        const methodNames = Object.getOwnPropertyNames(Object.getPrototypeOf(controllerAsAny)).filter(property => typeof (controllerAsAny as any)[property] === "function");
 
-                regex.magicMethod.lastIndex = 0;
-                const match = regex.magicMethod.exec(methodName);
+        methodNames.forEach(methodName => {
+            const fce = controllerAsAny[methodName];
 
-                if (!match || !match.groups) return;
+            switch (methodName) {
+                case "startup": methods.startup = fce; return;
+                case "beforeRender": methods.beforeRender = fce; return;
+            }
 
-                const type = match.groups.type;
-                const name = firstLower(match.groups.name);
+            regex.magicMethod.lastIndex = 0;
+            const match = regex.magicMethod.exec(methodName);
 
-                switch (type) {
-                    case "inject": methods.inject.set(name, fce); return;
-                    case "action": methods.action.set(name, fce); return;
-                    case "render": methods.render.set(name, fce); return;
-                }
-            });
+            if (!match || !match.groups) return;
 
-            return methods;
-        }
+            const type = match.groups.type;
+            const name = firstLower(match.groups.name);
 
-        return this.#methodsCache.load(controller.constructor.name, () => {
-            return parse(controller);
+            switch (type) {
+                case "inject": methods.inject.set(name, fce); return;
+                case "action": methods.action.set(name, fce); return;
+                case "render": methods.render.set(name, fce); return;
+            }
         });
+
+        return methods;
     }
 
 
@@ -186,33 +184,49 @@ export class ControllerManager {
         const { controller, view } = this.#parseMeta(meta);
 
         const instance = await this.#createInstance(controller, req);
+        console.log("> instance", instance);
+
         const methods = this.#parseMethods(instance);
 
-        // TODO: call inject methods
+        try {
+            // TODO: call inject methods
 
-        if (methods.startup) {
-            const exit = await methods.startup();
-            if (exit instanceof Response) return exit;
+            if (methods.startup) {
+                await methods.startup();
+            }
+
+            // TODO: build arguments
+
+            if (methods.action.has(view)) {
+                methods.action.get(view)!();
+            }
+
+            if (methods.beforeRender) {
+                await methods.beforeRender();
+            }
+
+            if (methods.render.has(view)) {
+                methods.render.get(view)!();
+            }
+        } catch (error) {
+            console.log("> A");
+            console.log(error);
+
+
+            if (!(error instanceof ControllerExit)) throw new error;
+            console.log("> B");
+
+            const exit = error as ControllerExit;
+            const exitValue = exit.getValue();
+
+            if (exitValue instanceof Response) {
+                return exitValue;
+            }
+
+            console.log("Unknown exit value", exitValue);
+            throw new Error("Unknown exit value");
+
         }
-
-        // TODO: build arguments
-
-        if (methods.action.has(view)) {
-            const exit = methods.action.get(view)!();
-            if (exit instanceof Response) return exit;
-        }
-
-        if (methods.beforeRender) {
-            const exit = await methods.beforeRender();
-            if (exit instanceof Response) return exit;
-        }
-
-
-        if (methods.render.has(view)) {
-            const exit = methods.action.get(view)!();
-            if (exit instanceof Response) return exit;
-        }
-
 
         throw new Error("View not found");
     }
