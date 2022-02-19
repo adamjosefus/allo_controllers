@@ -14,6 +14,7 @@ class Controller extends AbstractController { }
 
 type InjectMethodType<InjectedObject = unknown> = (instance: InjectedObject) => void;
 type StartupMethodType = () => void | Promise<void>;
+type ShutdownMethodType = () => void | Promise<void>;
 type BeforeRenderMethodType = () => void | Promise<void>;
 type ViewActionMethodType = (params: Record<string, string>) => void | Promise<void>;
 type ViewRenderMethodType = (params: Record<string, string>) => void | Promise<void>;
@@ -29,6 +30,7 @@ type MethodWithArgsCallerType<F extends (...args: any[]) => unknown, A extends u
 
 type MethodSetType = {
     startup?: MethodCallerType<StartupMethodType>,
+    shutdown?: MethodCallerType<ShutdownMethodType>,
     beforeRender?: MethodCallerType<BeforeRenderMethodType>,
     inject: Map<string, MethodCallerType<InjectMethodType>>,
     action: Map<string, MethodWithArgsCallerType<ViewActionMethodType, [Record<string, string>]>>,
@@ -117,6 +119,13 @@ export class ControllerManager {
             }
         }
 
+        function createShutdownCaller(method: string) {
+            return (instance: Controller): ReturnType<ShutdownMethodType> => {
+                // deno-lint-ignore no-explicit-any
+                (instance as any)[method]();
+            }
+        }
+
         function createBeforeRenderCaller(method: string) {
             return (instance: Controller): ReturnType<StartupMethodType> => {
                 // deno-lint-ignore no-explicit-any
@@ -161,6 +170,10 @@ export class ControllerManager {
                 switch (method) {
                     case 'startup':
                         methodSet.startup = createStartupCaller(method);
+                        return;
+
+                    case 'shutdown':
+                        methodSet.shutdown = createShutdownCaller(method);
                         return;
 
                     case 'beforeRender':
