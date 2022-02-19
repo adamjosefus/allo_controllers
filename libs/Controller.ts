@@ -26,10 +26,15 @@ export abstract class Controller {
     }
 
 
-    sendJson(data: unknown): void {
-        const response = new Response(JSON.stringify(data), {
+    sendJson(data: unknown, pretty = false): void {
+        const body = (() => {
+            if (pretty) return JSON.stringify(data, null, 2);
+            return JSON.stringify(data);
+        })();
+
+        const response = new Response(body, {
             headers: new Headers({
-                "Content-Type": "application/json",
+                "Content-Type": "application/json; charset=utf-8",
             }),
         });
 
@@ -40,7 +45,7 @@ export abstract class Controller {
     sendPlainText(text: string): void {
         const response = new Response(text, {
             headers: new Headers({
-                "Content-Type": "text/plain",
+                "Content-Type": "text/plain; charset=utf-8",
             }),
         });
 
