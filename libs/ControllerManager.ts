@@ -25,12 +25,6 @@ type ViewRenderMethodType = (params: Record<string, string>) => void | Promise<v
 type MethodHandlerType<F extends (...args: any[]) => unknown> = (instance: Controller) => ReturnType<F>;
 
 type MethodSetType = {
-    // startup?: (instance: Controller) => ReturnType<StartupMethodType>,
-    // inject: Map<string, (instance: Controller) => ReturnType<InjectMethodType>>,
-    // action: Map<string, (instance: Controller) => ReturnType<ViewActionMethodType>>,
-    // beforeRender?: (instance: Controller) => ReturnType<BeforeRenderMethodType>,
-    // render: Map<string, (instance: Controller) => ReturnType<ViewRenderMethodType>>,
-
     startup?: MethodHandlerType<StartupMethodType>,
     inject: Map<string, MethodHandlerType<InjectMethodType>>,
     action: Map<string, MethodHandlerType<ViewActionMethodType>>,
@@ -40,16 +34,21 @@ type MethodSetType = {
 
 const classSuffix = "Controller";
 
-const regex = {
-    className: new RegExp(`^[A-Z][a-zA-Z0-9]*${classSuffix}$`),
-    magicMethod: /^(?<type>inject|action|render)(?<name>[A-Z][a-zA-Z0-9]*)$/,
-}
+// const regex = {
+//     className: new RegExp(`^[A-Z][a-zA-Z0-9]*${classSuffix}$`),
+//     magicMethod: /^(?<type>inject|action|render)(?<name>[A-Z][a-zA-Z0-9]*)$/,
+// }
 
 
 
 
 
 export class ControllerManager {
+    static readonly #regexp = {
+        className: new RegExp(`^[A-Z][a-zA-Z0-9]*${classSuffix}$`),
+        magicMethod: /^(?<type>inject|action|render)(?<name>[A-Z][a-zA-Z0-9]*)$/,
+    }
+
     #dir: string;
 
     readonly #classCache: Cache<{ new(): Controller }> = new Cache();
@@ -81,7 +80,6 @@ export class ControllerManager {
         const module = await import(path);
 
         const classObject = module[className] as { new(): Controller };
-
         return classObject;
     }
 
@@ -104,15 +102,15 @@ export class ControllerManager {
     }
 
 
-    async #hasClassObject(name: string): Promise<boolean> {
-        try {
-            await this.#getClassObject(name);
-            return true;
+    // async #hasClassObject(name: string): Promise<boolean> {
+    //     try {
+    //         await this.#getClassObject(name);
+    //         return true;
 
-        } catch (_error) {
-            return false;
-        }
-    }
+    //     } catch (_error) {
+    //         return false;
+    //     }
+    // }
 
 
     #createMethodSet(controller: Controller): MethodSetType {
@@ -147,6 +145,7 @@ export class ControllerManager {
                     return;
             }
 
+            const regex = ControllerManager.#regexp;
             regex.magicMethod.lastIndex = 0;
             const match = regex.magicMethod.exec(method);
 
