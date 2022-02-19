@@ -8,23 +8,34 @@ import { firstLower, firstUpper } from "./helper/changeCase.ts";
 import { Controller as AbstractController } from "./Controller.ts";
 import { ControllerExit } from "./ControllerExit.ts";
 
+class Controller extends AbstractController { }
+
 
 // type Promisable<T> = T | Promise<T>;
 // type ExitType = Promisable<Response | Deno.FsFile | File | string | number | void | unknown>;
 
-type InjectMethodType<instanceObject = unknown> = (instance: instanceObject) => void;
+type InjectMethodType<InjectedObject = unknown> = (instance: InjectedObject) => void;
 type StartupMethodType = () => void | Promise<void>;
-type ViewActionMethodType = () => void | Promise<void>;
+type ViewActionMethodType = (params: Record<string, string>) => void | Promise<void>;
 type BeforeRenderMethodType = () => void | Promise<void>;
-type ViewRenderMethodType = () => void | Promise<void>;
+type ViewRenderMethodType = (params: Record<string, string>) => void | Promise<void>;
 
 
-type ControllerMethodsType = {
-    startup?: StartupMethodType,
-    inject: Map<string, InjectMethodType>,
-    action: Map<string, ViewActionMethodType>,
-    beforeRender?: BeforeRenderMethodType,
-    render: Map<string, ViewRenderMethodType>,
+// deno-lint-ignore no-explicit-any
+type MethodHandlerType<F extends (...args: any[]) => unknown> = (instance: Controller) => ReturnType<F>;
+
+type MethodSetType = {
+    // startup?: (instance: Controller) => ReturnType<StartupMethodType>,
+    // inject: Map<string, (instance: Controller) => ReturnType<InjectMethodType>>,
+    // action: Map<string, (instance: Controller) => ReturnType<ViewActionMethodType>>,
+    // beforeRender?: (instance: Controller) => ReturnType<BeforeRenderMethodType>,
+    // render: Map<string, (instance: Controller) => ReturnType<ViewRenderMethodType>>,
+
+    startup?: MethodHandlerType<StartupMethodType>,
+    inject: Map<string, MethodHandlerType<InjectMethodType>>,
+    action: Map<string, MethodHandlerType<ViewActionMethodType>>,
+    beforeRender?: MethodHandlerType<BeforeRenderMethodType>,
+    render: Map<string, MethodHandlerType<ViewRenderMethodType>>,
 }
 
 const classSuffix = "Controller";
@@ -35,14 +46,14 @@ const regex = {
 }
 
 
-class Controller extends AbstractController { }
+
 
 
 export class ControllerManager {
     #dir: string;
 
     readonly #classCache: Cache<{ new(): Controller }> = new Cache();
-    readonly #methodsCache: Cache<ControllerMethodsType> = new Cache();
+    readonly #methodsCache: Cache<MethodSetType> = new Cache();
 
     readonly defaultControllerFallback = 'Homepage';
     readonly defaultActionFallback = 'default';
@@ -104,27 +115,41 @@ export class ControllerManager {
     }
 
 
-    #parseMethods(controller: Controller): ControllerMethodsType {
+    #createMethodSet(controller: Controller): MethodSetType {
         const controllerAsAny = controller as any;
 
-        console.log("controllerAsAny", controllerAsAny);
-
-
-        const methods: ControllerMethodsType = {
+        const methods: MethodSetType = {
+            startup: undefined,
             inject: new Map(),
             action: new Map(),
+            beforeRender: undefined,
             render: new Map(),
         };
 
         // deno-lint-ignore no-explicit-any
         const methodNames = Object.getOwnPropertyNames(Object.getPrototypeOf(controllerAsAny)).filter(property => typeof (controllerAsAny as any)[property] === "function");
 
+
+
+
+        function createCallback(method: string) {
+            return (instance: Controller) => {
+                // deno-lint-ignore no-explicit-any
+                (instance as any)[method]();
+            }
+        }
+
         methodNames.forEach(methodName => {
             const fce = controllerAsAny[methodName];
 
             switch (methodName) {
-                case "startup": methods.startup = fce; return;
-                case "beforeRender": methods.beforeRender = fce; return;
+                case 'startup':
+                    methods.startup = createCallback(methodName);
+                    return;
+
+                case 'beforeRender':
+                    methods.beforeRender = createCallback(methodName);
+                    return;
             }
 
             regex.magicMethod.lastIndex = 0;
@@ -136,9 +161,18 @@ export class ControllerManager {
             const name = firstLower(match.groups.name);
 
             switch (type) {
-                case "inject": methods.inject.set(name, fce); return;
-                case "action": methods.action.set(name, fce); return;
-                case "render": methods.render.set(name, fce); return;
+                case 'inject':
+                    methods.inject.set(name, createCallback(methodName));
+                    return;
+
+                case 'action':
+                    methods.action.set(name, createCallback(methodName));
+                    return;
+
+                case 'render':
+                    methods.render.set(name, createCallback(methodName));
+                    return;
+
             }
         });
 
@@ -184,37 +218,34 @@ export class ControllerManager {
         const { controller, view } = this.#parseMeta(meta);
 
         const instance = await this.#createInstance(controller, req);
-        console.log("> instance", instance);
-
-        const methods = this.#parseMethods(instance);
+        const methods = this.#createMethodSet(instance);
 
         try {
+            // TODO: build arguments
             // TODO: call inject methods
 
             if (methods.startup) {
-                await methods.startup();
+                const fce = methods.startup;
+                await fce(instance);
             }
 
-            // TODO: build arguments
-
             if (methods.action.has(view)) {
-                methods.action.get(view)!();
+                const fce = methods.action.get(view)!;
+                await fce(instance);
             }
 
             if (methods.beforeRender) {
-                await methods.beforeRender();
+                const fce = methods.beforeRender;
+                await fce(instance);
             }
 
             if (methods.render.has(view)) {
-                methods.render.get(view)!();
+                const fce = methods.render.get(view)!;
+                await fce(instance);
             }
+
         } catch (error) {
-            console.log("> A");
-            console.log(error);
-
-
             if (!(error instanceof ControllerExit)) throw new error;
-            console.log("> B");
 
             const exit = error as ControllerExit;
             const exitValue = exit.getValue();
@@ -225,7 +256,6 @@ export class ControllerManager {
 
             console.log("Unknown exit value", exitValue);
             throw new Error("Unknown exit value");
-
         }
 
         throw new Error("View not found");
