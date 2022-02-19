@@ -25,8 +25,8 @@ export class RouterList extends SuperRouterList {
                 return await this.#manager.createResponse(meta, req, params);
             } catch (error) {
                 return this.getErrorReponse(Status.S500_InternalServerError, req, {
-                    phrase: error.message,
-                })
+                    error: error.message,
+                });
             }
         }
 
