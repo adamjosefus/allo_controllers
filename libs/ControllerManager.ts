@@ -52,7 +52,7 @@ export class ControllerManager {
     #dir: string;
 
     readonly #classCache: Cache<{ new(): Controller }> = new Cache();
-    readonly #methodsCache: Cache<MethodSetType> = new Cache();
+    readonly #methodSetCache: Cache<MethodSetType> = new Cache();
 
     readonly defaultControllerFallback = 'Homepage';
     readonly defaultActionFallback = 'default';
@@ -121,56 +121,58 @@ export class ControllerManager {
             }
         }
 
+        const create = (controller: Controller): MethodSetType => {
+            const methodSet: MethodSetType = {
+                startup: undefined,
+                inject: new Map(),
+                action: new Map(),
+                beforeRender: undefined,
+                render: new Map(),
+            };
 
-        const methodSet: MethodSetType = {
-            startup: undefined,
-            inject: new Map(),
-            action: new Map(),
-            beforeRender: undefined,
-            render: new Map(),
-        };
+            // deno-lint-ignore no-explicit-any
+            const allMethods = Object.getOwnPropertyNames(Object.getPrototypeOf(controller)).filter(property => typeof (controller as any)[property] === "function");
 
-        // deno-lint-ignore no-explicit-any
-        const allMethods = Object.getOwnPropertyNames(Object.getPrototypeOf(controller)).filter(property => typeof (controller as any)[property] === "function");
+            allMethods.forEach(method => {
+                switch (method) {
+                    case 'startup':
+                        methodSet.startup = createCallback(method);
+                        return;
 
+                    case 'beforeRender':
+                        methodSet.beforeRender = createCallback(method);
+                        return;
+                }
 
-        allMethods.forEach(method => {
-            switch (method) {
-                case 'startup':
-                    methodSet.startup = createCallback(method);
-                    return;
+                const regex = ControllerManager.#regexp;
+                regex.magicMethod.lastIndex = 0;
+                const match = regex.magicMethod.exec(method);
 
-                case 'beforeRender':
-                    methodSet.beforeRender = createCallback(method);
-                    return;
-            }
+                if (!match || !match.groups) return;
 
-            const regex = ControllerManager.#regexp;
-            regex.magicMethod.lastIndex = 0;
-            const match = regex.magicMethod.exec(method);
+                const type = match.groups.type;
+                const name = firstLower(match.groups.name);
 
-            if (!match || !match.groups) return;
+                switch (type) {
+                    case 'inject':
+                        methodSet.inject.set(name, createCallback(method));
+                        return;
 
-            const type = match.groups.type;
-            const name = firstLower(match.groups.name);
+                    case 'action':
+                        methodSet.action.set(name, createCallback(method));
+                        return;
 
-            switch (type) {
-                case 'inject':
-                    methodSet.inject.set(name, createCallback(method));
-                    return;
+                    case 'render':
+                        methodSet.render.set(name, createCallback(method));
+                        return;
 
-                case 'action':
-                    methodSet.action.set(name, createCallback(method));
-                    return;
+                }
+            });
 
-                case 'render':
-                    methodSet.render.set(name, createCallback(method));
-                    return;
+            return methodSet;
+        }
 
-            }
-        });
-
-        return methodSet;
+        return this.#methodSetCache.load(controller.constructor.name, () => create(controller));
     }
 
 
