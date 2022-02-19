@@ -116,9 +116,15 @@ export class ControllerManager {
 
 
     #createMethodSet(controller: Controller): MethodSetType {
-        const controllerAsAny = controller as any;
+        function createCallback(method: string) {
+            return (instance: Controller) => {
+                // deno-lint-ignore no-explicit-any
+                (instance as any)[method]();
+            }
+        }
 
-        const methods: MethodSetType = {
+
+        const methodSet: MethodSetType = {
             startup: undefined,
             inject: new Map(),
             action: new Map(),
@@ -127,31 +133,22 @@ export class ControllerManager {
         };
 
         // deno-lint-ignore no-explicit-any
-        const methodNames = Object.getOwnPropertyNames(Object.getPrototypeOf(controllerAsAny)).filter(property => typeof (controllerAsAny as any)[property] === "function");
+        const allMethods = Object.getOwnPropertyNames(Object.getPrototypeOf(controller)).filter(property => typeof (controller as any)[property] === "function");
 
 
-
-
-        function createCallback(method: string) {
-            return (instance: Controller) => {
-                // deno-lint-ignore no-explicit-any
-                (instance as any)[method]();
-            }
-        }
-
-        methodNames.forEach(methodName => {
-            switch (methodName) {
+        allMethods.forEach(method => {
+            switch (method) {
                 case 'startup':
-                    methods.startup = createCallback(methodName);
+                    methodSet.startup = createCallback(method);
                     return;
 
                 case 'beforeRender':
-                    methods.beforeRender = createCallback(methodName);
+                    methodSet.beforeRender = createCallback(method);
                     return;
             }
 
             regex.magicMethod.lastIndex = 0;
-            const match = regex.magicMethod.exec(methodName);
+            const match = regex.magicMethod.exec(method);
 
             if (!match || !match.groups) return;
 
@@ -160,21 +157,21 @@ export class ControllerManager {
 
             switch (type) {
                 case 'inject':
-                    methods.inject.set(name, createCallback(methodName));
+                    methodSet.inject.set(name, createCallback(method));
                     return;
 
                 case 'action':
-                    methods.action.set(name, createCallback(methodName));
+                    methodSet.action.set(name, createCallback(method));
                     return;
 
                 case 'render':
-                    methods.render.set(name, createCallback(methodName));
+                    methodSet.render.set(name, createCallback(method));
                     return;
 
             }
         });
 
-        return methods;
+        return methodSet;
     }
 
 
