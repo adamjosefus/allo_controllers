@@ -4,26 +4,26 @@ import { Controller } from "../../libs/Controller.ts";
 export class HomepageController extends Controller {
 
     startup() {
-        console.log("---> HomepageController.startup", this);
+        console.log("Homepage->startup");
     }
 
 
     beforeRender() {
-        console.log("---> HomepageController.beforeRender", this);
+        console.log("Homepage->beforeRender");
     }
 
 
     actionDefault() {
-        console.log("---> HomepageController.actionDefault", this);
+        console.log("Homepage->actionDefault");
     }
 
 
     renderDefault() {
-        console.log("---> HomepageController.rendernDefault", this);
+        console.log("Homepage->rendernDefault");
         
         this.sendJson({
-            "ahoj": "world",
-        })
+            "message": "4",
+        }, true)
     }
 
 }
