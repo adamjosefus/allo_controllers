@@ -4,7 +4,7 @@
 
 
 import { ControllerExit } from "./ControllerExit.ts";
-import { Status } from "https://deno.land/x/allo_routing@v1.1.2/mod.ts";
+import { Status } from "https://deno.land/x/allo_routing@v1.1.3/mod.ts";
 import { FileResponse, JsonResponse, TextResponse } from "https://deno.land/x/allo_responses@v1.0.1/mod.ts";
 
 
