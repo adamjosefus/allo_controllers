@@ -12,12 +12,13 @@ import { Controller as AbstractController } from "./Controller.ts";
 class Controller extends AbstractController { }
 
 
-type InjectMethodType<InjectedObject = unknown> = (instance: InjectedObject) => void;
+type InjectMethodType<InjectedObject = unknown> = (instance: InjectedObject) => void | Promise<void>;
 type StartupMethodType = () => void | Promise<void>;
-type ShutdownMethodType = () => void | Promise<void>;
 type BeforeRenderMethodType = () => void | Promise<void>;
 type ViewActionMethodType = (params: Record<string, string>) => void | Promise<void>;
 type ViewRenderMethodType = (params: Record<string, string>) => void | Promise<void>;
+type AfterRenderMethodType = () => void | Promise<void>;
+type ShutdownMethodType = () => void | Promise<void>;
 
 
 // Methods Callers
@@ -29,12 +30,13 @@ type MethodWithArgsCallerType<F extends (...args: any[]) => unknown, A extends u
 
 
 type MethodSetType = {
-    startup?: MethodCallerType<StartupMethodType>,
-    shutdown?: MethodCallerType<ShutdownMethodType>,
-    beforeRender?: MethodCallerType<BeforeRenderMethodType>,
     inject: Map<string, MethodWithArgsCallerType<InjectMethodType, [instance: unknown]>>,
+    startup?: MethodCallerType<StartupMethodType>,
+    beforeRender?: MethodCallerType<BeforeRenderMethodType>,
     action: Map<string, MethodWithArgsCallerType<ViewActionMethodType, [Record<string, string>]>>,
     render: Map<string, MethodWithArgsCallerType<ViewRenderMethodType, [Record<string, string>]>>,
+    afterRender?: MethodCallerType<AfterRenderMethodType>,
+    shutdown?: MethodCallerType<ShutdownMethodType>,
 }
 
 
@@ -160,6 +162,14 @@ export class ControllerManager {
         }
 
         // TODO: This solution is realy stupid. Change it
+        function createAfterRenderCaller(method: string) {
+            return (instance: Controller): ReturnType<StartupMethodType> => {
+                // deno-lint-ignore no-explicit-any
+                (instance as any)[method]();
+            }
+        }
+
+        // TODO: This solution is realy stupid. Change it
         function createInjectCaller(method: string) {
             return (instance: Controller, dependency: unknown): ReturnType<InjectMethodType> => {
                 // deno-lint-ignore no-explicit-any
@@ -185,11 +195,12 @@ export class ControllerManager {
 
         const createSet = (controller: Controller): MethodSetType => {
             const methodSet: MethodSetType = {
-                startup: undefined,
                 inject: new Map(),
+                startup: undefined,
                 action: new Map(),
                 beforeRender: undefined,
                 render: new Map(),
+                afterRender: undefined,
             };
 
             // deno-lint-ignore no-explicit-any
@@ -207,6 +218,10 @@ export class ControllerManager {
 
                     case 'beforeRender':
                         methodSet.beforeRender = createBeforeRenderCaller(method);
+                        return;
+
+                    case 'afterRender':
+                        methodSet.afterRender = createAfterRenderCaller(method);
                         return;
                 }
 
@@ -283,15 +298,9 @@ export class ControllerManager {
         const methods = this.#createMethodSet(instance);
 
         try {
-            // TODO: build arguments
-            // TODO: call inject methods
-
             for (const [name, fce] of methods.inject) {
-                console.log(">> inject", name);
-
-                fce(instance, this.#dependecies.get(name));
+                await fce(instance, this.#dependecies.get(name));
             }
-
 
             if (methods.startup) {
                 const fce = methods.startup;
@@ -313,17 +322,22 @@ export class ControllerManager {
                 await fce(instance, params);
             }
 
+            if (methods.afterRender) {
+                const fce = methods.afterRender;
+                await fce(instance);
+            }
+
         } catch (error) {
             if (!(error instanceof ControllerExit)) throw new error;
 
             const exit = error as ControllerExit;
-            const output = exit.getOutput();
+            const reason = exit.getReason();
 
-            if (output instanceof Response) {
-                return output;
+            if (reason instanceof Response) {
+                return reason;
             }
 
-            console.log("Unknown exit output", output);
+            console.log("Unknown exit output", reason);
             throw new Error("Unknown exit output");
         }
 
