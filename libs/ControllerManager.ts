@@ -64,7 +64,7 @@ export class ControllerManager {
 
 
     /**
-     * If name is not given, it will be the class name.
+     * If name is **not given**, it will be the **class name**.
      */
     // deno-lint-ignore ban-types
     addDependency(...entry: [name: string, instance: Object] | [instance: Object]): void {
