@@ -26,7 +26,7 @@ manager.addDependency(dummyDependency);
 
 const router = new RouterList(manager);
 router.add("", () => new Response("Hello World!"));
-router.addController("homepage/default[/<id>]", "Homepage:default");
+router.addController("homepage/<action>", "Homepage:default");
 
 
 const server = new Server(router);

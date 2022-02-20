@@ -282,19 +282,22 @@ export class ControllerManager {
 
 
     #parseMeta(meta: string) {
-        const [controller, view] = meta.split(":");
+        const [controller, action] = meta.split(":");
 
         return {
             controller: firstUpper(controller),
-            view: firstLower(view),
+            action: firstLower(action),
         };
     }
 
 
     async createResponse(meta: string, req: Request, params: Record<string, string>): Promise<Response> {
-        const { controller, view } = this.#parseMeta(meta);
+        const metaParts = this.#parseMeta(meta);
 
-        const instance = await this.#createInstance(controller, req);
+        const controllerName = params['controller'] ?? metaParts.controller;
+        const actionName = params['action'] ?? metaParts.action;
+
+        const instance = await this.#createInstance(controllerName, req);
         const methods = this.#createMethodSet(instance);
 
         try {
@@ -307,8 +310,8 @@ export class ControllerManager {
                 await fce(instance);
             }
 
-            if (methods.action.has(view)) {
-                const fce = methods.action.get(view)!;
+            if (methods.action.has(actionName)) {
+                const fce = methods.action.get(actionName)!;
                 await fce(instance, params);
             }
 
@@ -317,8 +320,8 @@ export class ControllerManager {
                 await fce(instance);
             }
 
-            if (methods.render.has(view)) {
-                const fce = methods.render.get(view)!;
+            if (methods.render.has(actionName)) {
+                const fce = methods.render.get(actionName)!;
                 await fce(instance, params);
             }
 
