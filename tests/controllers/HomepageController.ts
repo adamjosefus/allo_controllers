@@ -14,9 +14,21 @@ export class HomepageController extends Controller {
     }
 
 
+    shutdown() {
+        super.shutdown();
+        console.log("Homepage::shutdown");
+    }
+
+
     beforeRender() {
-        super.startup();
+        super.beforeRender();
         console.log("Homepage::beforeRender");
+    }
+
+
+    afterRender() {
+        super.afterRender();
+        console.log("Homepage::afterRender");
     }
 
 
@@ -29,7 +41,7 @@ export class HomepageController extends Controller {
         console.log("Homepage::renderDefault");
         
         this.sendJson({
-            "message": "4",
+            "message": "4"
         }, true)
     }
 }
