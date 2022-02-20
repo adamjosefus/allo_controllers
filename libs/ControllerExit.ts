@@ -13,20 +13,24 @@ type ExitValueType = Promisable<Response>;
 export class ControllerExit extends Error {
 
     readonly #controller: Controller;
-    readonly #output: ExitValueType;
+    readonly reason: ExitValueType;
 
-    constructor(controller: Controller, output: ExitValueType) {
+    constructor(controller: Controller, reason: ExitValueType) {
         super(`Controller Exit - This exception should be caught.`);
 
         this.#controller = controller;
-        this.#output = output;
+        this.reason = reason;
 
         this.#controller.shutdown();
     }
 
 
-    getOutput(): ExitValueType {
-        return this.#output;
+    getReason(): ExitValueType {
+        return this.reason;
     }
 
+
+    getController(): Controller {
+        return this.#controller;
+    }
 }
