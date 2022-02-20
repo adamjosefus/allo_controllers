@@ -3,32 +3,30 @@ import { Controller } from "../../libs/Controller.ts";
 
 export class HomepageController extends Controller {
 
-    injectControllerManager(instance: unknown) {
-        console.log("Homepage->injectControllerManager", instance);
+    injectDummyDependency(instance: unknown) {
+        console.log("Homepage::injectDummyDependency", instance);
     }
 
 
     startup() {
         super.startup();
-        console.log("Homepage->startup");
+        console.log("Homepage::startup");
     }
 
 
     beforeRender() {
         super.startup();
-        console.log("Homepage->beforeRender");
+        console.log("Homepage::beforeRender");
     }
 
 
-    actionDefault({ id }: Record<string, string>) {
-        console.log("Homepage->actionDefault");
-        console.log("> id", id);
+    actionDefault() {
+        console.log("Homepage::actionDefault");
     }
 
 
-    renderDefault(params: Record<string, string>) {
-        console.log("Homepage->renderDefault");
-        console.log("> params", params);
+    renderDefault() {
+        console.log("Homepage::renderDefault");
         
         this.sendJson({
             "message": "4",
