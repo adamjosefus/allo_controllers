@@ -3,48 +3,29 @@
  */
 
 
-import { readableStreamFromReader } from "https://deno.land/std@0.126.0/streams/mod.ts";
-import { Status } from "https://deno.land/x/allo_routing@v1.1.2/mod.ts";
 import { ControllerExit } from "./ControllerExit.ts";
+import { Status } from "https://deno.land/x/allo_routing@v1.1.2/mod.ts";
+import { FileResponse, JsonResponse, TextResponse } from "https://deno.land/x/allo_responses@v1.0.1/mod.ts";
 
 
-type SendFileEntry =
-    | [path: string]
-    | [file: File];
-
-
-interface ControllerInterface {
-    addEventListener(
-        type: 'startup' | 'before-render' | 'shutdown',
-        listener: EventListenerOrEventListenerObject,
-        options?: boolean | AddEventListenerOptions,
-    ): void;
-}
-
-
-export abstract class Controller extends EventTarget implements ControllerInterface {
+export abstract class Controller {
 
     readonly #request: Request;
 
     constructor(request: Request) {
-        super();
-
         this.#request = request;
     }
 
 
     startup(): void {
-        this.dispatchEvent(new Event('startup'))
     }
 
 
     beforeRender(): void {
-        this.dispatchEvent(new Event('before-render'))
     }
 
 
     shutdown(): void {
-        this.dispatchEvent(new Event('shutdown'))
     }
 
 
@@ -58,54 +39,29 @@ export abstract class Controller extends EventTarget implements ControllerInterf
     }
 
 
-    sendJson(data: unknown, pretty = false): void {
-        const body = (() => {
-            if (pretty) return JSON.stringify(data, null, 2);
-            return JSON.stringify(data);
-        })();
-
-        const response = new Response(body, {
-            headers: new Headers({
-                "Content-Type": "application/json; charset=utf-8",
-            }),
-        });
-
+    sendJson(data: unknown, prettyPrint = false): void { 
+        const response = new JsonResponse(data, {}, prettyPrint);
         this.sendResponse(response);
     }
 
 
-    sendPlainText(text: string): void {
-        const response = new Response(text, {
-            headers: new Headers({
-                "Content-Type": "text/plain; charset=utf-8",
-            }),
-        });
-
+    sendText(text: string): void {
+        const response = new TextResponse(text);
         this.sendResponse(response);
     }
 
 
-    sendFile(...values: [path: string] | [file: File] | [file: Deno.FsFile]): void {
-        const [entry] = values;
+    sendFile(file: string | File | Deno.FsFile): void {
+        const response = new FileResponse(file);
+        this.sendResponse(response);
+    }
 
-        if (entry instanceof File) {
-            const body = entry.stream();
-            const response = new Response(body);
 
-            this.sendResponse(response);
-            return;
-        }
+    sendDownloadFile(file: string | File | Deno.FsFile, downloadName: string): void {
+        const response = new FileResponse(file);
+        response.headers.set("Content-Disposition", `attachment; filename="${downloadName}"`);
 
-        if (entry instanceof Deno.FsFile) {
-            const body = readableStreamFromReader(entry);
-            const response = new Response(body);
-
-            this.sendResponse(response);
-            return;
-        }
-
-        const file = Deno.openSync(entry, { read: true });
-        this.sendFile(file);
+        this.sendResponse(response);
     }
 
 
