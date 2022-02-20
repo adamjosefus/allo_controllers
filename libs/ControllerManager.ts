@@ -62,18 +62,25 @@ export class ControllerManager {
     }
 
 
+
+    /**
+     * If name is not given, it will be the class name.
+     */
     // deno-lint-ignore ban-types
-    addDependency(name: string, object: Object): void {
-        const cleanName = firstLower(name);
+    addDependency(...entry: [name: string, instance: Object] | [instance: Object]): void {
+        const [name, instance] = (() => {
+            if (entry.length === 2) {
+                return [firstLower(entry[0]), entry[1]];
+            } else {
+                return [firstLower(entry[0].constructor.name), entry[0]];
+            }
+        })();
 
-        console.log(">> cleanName", cleanName);
-        
-
-        if (this.#dependecies.has(cleanName)) {
-            throw new Error("Name already exists");
+        if (this.#dependecies.has(name)) {
+            throw new Error(`Dependecy "${name}" already exists`);
         }
 
-        this.#dependecies.set(cleanName, object);
+        this.#dependecies.set(name, instance);
     }
 
 
@@ -281,7 +288,7 @@ export class ControllerManager {
 
             for (const [name, fce] of methods.inject) {
                 console.log(">> inject", name);
-                
+
                 fce(instance, this.#dependecies.get(name));
             }
 
