@@ -5,28 +5,42 @@
 import { pipe } from "./pipe.ts";
 
 
-export function firstLower(s: string): string {
-    return s.substring(0, 1).toLowerCase() + s.substring(1);
-}
+export class Case {
+
+    static #regex = {
+        pascal: /^([A-Z][a-z]*[0-9]*)+$/,
+    }
 
 
-export function firstUpper(s: string): string {
-    return s.substring(0, 1).toUpperCase() + s.substring(1);
-}
+    static isPascal(s: string): boolean {
+        return this.#regex.pascal.test(s);
+    }
 
 
-export function pascalToCamel(s: string): string {
-    return firstLower(s);
-}
+    static firstLower(s: string): string {
+        return s.substring(0, 1).toLowerCase() + s.substring(1);
+    }
 
 
-export function camelToKebab(s: string): string {
-    return s.replace(/([a-z])([A-Z0-9])/g, '$1-$2').toLowerCase();
-}
+    static firstUpper(s: string): string {
+        return s.substring(0, 1).toUpperCase() + s.substring(1);
+    }
 
-export function pascalToKebab(s: string): string {
-    return pipe(
-        pascalToCamel,
-        camelToKebab,
-    )(s);
+
+    static pascalToCamel(s: string): string {
+        return this.firstLower(s);
+    }
+
+
+    static camelToKebab(s: string): string {
+        return s.replace(/([a-z])([A-Z0-9])/g, '$1-$2').toLowerCase();
+    }
+
+
+    static pascalToKebab(s: string): string {
+        return pipe(
+            this.pascalToCamel,
+            this.camelToKebab,
+        )(s);
+    }
 }
