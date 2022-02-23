@@ -10,7 +10,7 @@ type Promisable<T> = T | Promise<T>;
 type ExitValueType = Promisable<Response>;
 
 
-export class ControllerExit extends Error {
+export class ControllerLifeCycleExit extends Error {
 
     readonly #controller: Controller;
     readonly reason: ExitValueType;
@@ -20,8 +20,6 @@ export class ControllerExit extends Error {
 
         this.#controller = controller;
         this.reason = reason;
-
-        this.#controller.shutdown();
     }
 
 
