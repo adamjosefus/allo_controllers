@@ -2,12 +2,12 @@ import { Case } from "./helper/Case.ts";
 
 
 
-export class DependencyContainer {
+export class DIContainer {
 
     #dependecies: Map<string, unknown> = new Map();
 
     // deno-lint-ignore ban-types
-    register(name: string, instance: Object): void {
+    add(name: string, instance: Object): void {
         if (!Case.isPascal(name)) {
             throw new Error(`Invalid dependency name: ${name}. Case must be Pascal`);
         }
