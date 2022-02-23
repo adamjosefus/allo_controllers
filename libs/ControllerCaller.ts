@@ -23,13 +23,30 @@ export class ControllerCaller {
     }
 
 
+    #startup: CallerType<CommonMethodType>;
+    #beforeRender: CallerType<CommonMethodType>;
+    #afterRender: CallerType<CommonMethodType>;
+    #shutdown: CallerType<CommonMethodType>;
+
+    #inject: Map<string, CallerType<InjectMethodType>>;
+    #action: Map<string, CallerType<ViewMethodType>>;
+    #render: Map<string, CallerType<ViewMethodType>>;
+
+
     constructor(instance: Controller) {
         const methodNames = this.#parseMethodNames(instance);
-        
-        const x = {
-            ...this.#buildCommon(),
-            ...this.#buildMagic(methodNames),
-        }
+
+        const common = this.#buildCommon();
+        const magic = this.#buildMagic(methodNames);
+
+        this.#startup = common.startup;
+        this.#beforeRender = common.beforeRender;
+        this.#afterRender = common.afterRender;
+        this.#shutdown = common.shutdown;
+
+        this.#inject = magic.inject;
+        this.#action = magic.action;
+        this.#render = magic.render;
     }
 
 
