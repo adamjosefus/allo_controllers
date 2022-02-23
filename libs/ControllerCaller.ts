@@ -4,6 +4,7 @@
 
 
 import { Controller } from "./Controller.ts";
+import * as Case from "./helper/Case.ts";
 
 type Promisable<T> = T | Promise<T>;
 
@@ -25,7 +26,10 @@ export class ControllerCaller {
     constructor(instance: Controller) {
         const methodNames = this.#parseMethodNames(instance);
         
-        this.#buildCommon();
+        const x = {
+            ...this.#buildCommon(),
+            ...this.#buildMagic(methodNames),
+        }
     }
 
 
@@ -62,22 +66,23 @@ export class ControllerCaller {
             if (!match || !match.groups) return;
 
             const type = match.groups.type;
-            const name = firstLower(match.groups.name);
+            const name = Case.firstLower(match.groups.name);
+            const key = Case.camelToKebab(name);
 
             switch (type) {
                 case 'inject':
                     // deno-lint-ignore no-explicit-any
-                    inject.set(name, (c, injcted) => ((c as any)[method] as InjectMethodType)(injcted));
+                    inject.set(key, (c, injcted) => ((c as any)[method] as InjectMethodType)(injcted));
                     return;
 
                 case 'action':
                     // deno-lint-ignore no-explicit-any
-                    action.set(name, (c, params) => ((c as any)[method] as ViewMethodType)(params));
+                    action.set(key, (c, params) => ((c as any)[method] as ViewMethodType)(params));
                     return;
 
                 case 'render':
                     // deno-lint-ignore no-explicit-any
-                    render.set(name, (c, params) => ((c as any)[method] as ViewMethodType)(params));
+                    render.set(key, (c, params) => ((c as any)[method] as ViewMethodType)(params));
                     return;
 
             }
