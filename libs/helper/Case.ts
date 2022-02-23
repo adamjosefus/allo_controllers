@@ -6,29 +6,43 @@ import { pipe } from "./pipe.ts";
 
 
 export class Case {
-
-    static #regex = {
-        pascal: /^([A-Z][a-z]*[0-9]*)+$/,
-    }
-
-
+    
     static isPascal(s: string): boolean {
-        return this.#regex.pascal.test(s);
+        return /^([A-Z][a-z]*[0-9]*)+$/.test(s);
     }
 
 
-    static firstLower(s: string): string {
+    static isCamal(s: string): boolean {
+        return /^[a-z]+([A-Z][a-z]*[0-9]*)*$/.test(s);
+    }
+
+
+    static kebabToPascal(s: string): string {
+        const parts = s.split('-');
+
+        return parts.map(p => Case.upperFirst(p)).join('');
+    }
+
+    static kebabToCamel(s: string): string {
+        return pipe(
+            Case.pascalToCamel,
+            Case.lowerFirst,
+        )(s);
+    }
+
+
+    static lowerFirst(s: string): string {
         return s.substring(0, 1).toLowerCase() + s.substring(1);
     }
 
 
-    static firstUpper(s: string): string {
+    static upperFirst(s: string): string {
         return s.substring(0, 1).toUpperCase() + s.substring(1);
     }
 
 
     static pascalToCamel(s: string): string {
-        return this.firstLower(s);
+        return Case.lowerFirst(s);
     }
 
 
@@ -39,8 +53,8 @@ export class Case {
 
     static pascalToKebab(s: string): string {
         return pipe(
-            this.pascalToCamel,
-            this.camelToKebab,
+            Case.pascalToCamel,
+            Case.camelToKebab,
         )(s);
     }
 }
