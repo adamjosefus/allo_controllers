@@ -1,3 +1,8 @@
+/**
+ * @copyright Copyright (c) 2022 Adam Josefus
+ */
+
+
 import { join } from "https://deno.land/std@0.126.0/path/mod.ts";
 import { Cache } from "https://deno.land/x/allo_caching@v1.0.2/mod.ts";
 import { Controller as AbstractController } from "./Controller.ts";

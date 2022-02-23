@@ -3,7 +3,6 @@
  */
 
 
-// import { assertEquals } from "https://deno.land/std@0.126.0/testing/asserts.ts";
 import { join } from "https://deno.land/std@0.126.0/path/mod.ts";
 import { Server } from "https://deno.land/x/allo_server@v1.0.1/mod.ts";
 import { ControllerManager } from "../libs/ControllerManager.ts";

@@ -6,6 +6,32 @@ Extends the [**Allo Routing**](https://deno.land/x/allo_routing/mod.ts) framewor
 
 # Controller
 
+```ts
+// HomepageController.ts
+import { Controller } from "../../libs/Controller.ts";
+
+export class HomepageController extends Controller {
+    renderDefault() {
+        this.sendText("Hello World!");
+    }
+}
+```
+
+
+```ts
+// main.ts
+import { Server } from "https://deno.land/x/allo_server/mod.ts";
+import { ControllerManager, RouterList } from "https://deno.land/x/allo_controllers/mod.ts";
+
+const manager = new ControllerManager("./controllers");
+
+const router = new RouterList(manager);
+router.addController("homepage/<action>", "Homepage:default");
+
+const server = new Server(router);
+server.listen({ port: 8080 });
+```
+
 ## Life Cycle
 ```mermaid
   flowchart TB
