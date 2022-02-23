@@ -4,7 +4,7 @@
 
 
 import { Cache } from "https://deno.land/x/allo_caching@v1.0.2/mod.ts";
-import { firstLower, firstUpper } from "./helper/changeCase.ts";
+import { firstLower, firstUpper } from "./helper/Case.ts";
 import { ControllerExit } from "./ControllerExit.ts";
 import { Controller as AbstractController } from "./Controller.ts";
 
