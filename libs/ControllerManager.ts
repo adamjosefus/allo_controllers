@@ -4,346 +4,81 @@
 
 
 import { Cache } from "https://deno.land/x/allo_caching@v1.0.2/mod.ts";
-import { firstLower, firstUpper } from "./helper/changeCase.ts";
-import { ControllerExit } from "./ControllerExit.ts";
-import { Controller as AbstractController } from "./Controller.ts";
+import { ControllerLifeCycle } from "./ControllerLifeCycle.ts";
+import { ControllerLoader } from "./ControllerLoader.ts";
+import { DIContainer } from "./DIContainer.ts";
+import { Case } from "./helper/Case.ts";
 
 
-class Controller extends AbstractController { }
-
-
-type InjectMethodType<InjectedObject = unknown> = (instance: InjectedObject) => void | Promise<void>;
-type StartupMethodType = () => void | Promise<void>;
-type BeforeRenderMethodType = () => void | Promise<void>;
-type ViewActionMethodType = (params: Record<string, string>) => void | Promise<void>;
-type ViewRenderMethodType = (params: Record<string, string>) => void | Promise<void>;
-type AfterRenderMethodType = () => void | Promise<void>;
-type ShutdownMethodType = () => void | Promise<void>;
-
-
-// Methods Callers
-// deno-lint-ignore no-explicit-any
-type MethodCallerType<F extends (...args: any[]) => unknown> = (controller: Controller) => ReturnType<F>;
-
-// deno-lint-ignore no-explicit-any
-type MethodWithArgsCallerType<F extends (...args: any[]) => unknown, A extends unknown[]> = (controller: Controller, ...args: A) => ReturnType<F>;
-
-
-type MethodSetType = {
-    inject: Map<string, MethodWithArgsCallerType<InjectMethodType, [instance: unknown]>>,
-    startup?: MethodCallerType<StartupMethodType>,
-    beforeRender?: MethodCallerType<BeforeRenderMethodType>,
-    action: Map<string, MethodWithArgsCallerType<ViewActionMethodType, [Record<string, string>]>>,
-    render: Map<string, MethodWithArgsCallerType<ViewRenderMethodType, [Record<string, string>]>>,
-    afterRender?: MethodCallerType<AfterRenderMethodType>,
-    shutdown?: MethodCallerType<ShutdownMethodType>,
+type MetaType = {
+    controller: string,
+    action: string,
 }
 
 
-const classSuffix = "Controller";
-
-
 export class ControllerManager {
-    static readonly #regexp = {
-        className: new RegExp(`^[A-Z][a-zA-Z0-9]*${classSuffix}$`),
-        magicMethod: /^(?<type>inject|action|render)(?<name>[A-Z][a-zA-Z0-9]*)$/,
-    }
 
-    #dir: string;
-    #dependecies: Map<string, unknown> = new Map();
+    readonly #loader: ControllerLoader;
+    readonly #di: DIContainer;
 
-    readonly #classCache: Cache<{ new(): Controller }> = new Cache();
-    readonly #methodSetCache: Cache<MethodSetType> = new Cache();
+    readonly #callerCache: Cache<ControllerLifeCycle> = new Cache();
+    readonly #metaCache: Cache<MetaType> = new Cache();
+    readonly #paramControllerCache: Cache<string> = new Cache();
+    readonly #paramActionCache: Cache<string> = new Cache();
 
     readonly defaultControllerFallback = 'Homepage';
     readonly defaultActionFallback = 'default';
 
 
     constructor(dir: string) {
-        this.#dir = dir;
+        this.#loader = new ControllerLoader(dir);
+        this.#di = new DIContainer()
     }
 
 
-
-    /**
-     * If name is **not given**, it will be the **class name**.
-     */
     // deno-lint-ignore ban-types
-    addDependency(...entry: [name: string, instance: Object] | [instance: Object]): void {
-        const [name, instance] = (() => {
-            if (entry.length === 2) {
-                return [firstLower(entry[0]), entry[1]];
-            } else {
-                return [firstLower(entry[0].constructor.name), entry[0]];
-            }
-        })();
-
-        if (this.#dependecies.has(name)) {
-            throw new Error(`Dependecy "${name}" already exists`);
-        }
-
-        this.#dependecies.set(name, instance);
-    }
-
-
-    #computeClassName(name: string): string {
-        return `${name}Controller`;
-    }
-
-
-    #computePath(name: string): string {
-        const className = this.#computeClassName(name);
-        return `${this.#dir}/${className}.ts`;
-    }
-
-
-    async #importClassObject(name: string): Promise<{ new(): Controller }> {
-        const className = this.#computeClassName(name);
-        const path = this.#computePath(name);
-        const module = await import(path);
-
-        const classObject = module[className] as { new(): Controller };
-        return classObject;
-    }
-
-
-    async #getClassObject(name: string): Promise<typeof Controller> {
-        // Load from cache
-        const cacheKey = name;
-
-        if (this.#classCache.has(cacheKey)) {
-            return this.#classCache.load(cacheKey)!;
-        }
-
-        // Load from file
-        const classObject = await this.#importClassObject(name);
-
-        // Save to cache
-        this.#classCache.save(cacheKey, classObject);
-
-        return classObject;
-    }
-
-
-    // async #hasClassObject(name: string): Promise<boolean> {
-    //     try {
-    //         await this.#getClassObject(name);
-    //         return true;
-
-    //     } catch (_error) {
-    //         return false;
-    //     }
-    // }
-
-
-    #createMethodSet(controller: Controller): MethodSetType {
-        // TODO: This solution is realy stupid. Change it
-        function createStartupCaller(method: string) {
-            return (instance: Controller): ReturnType<StartupMethodType> => {
-                // deno-lint-ignore no-explicit-any
-                (instance as any)[method]();
-            }
-        }
-
-        // TODO: This solution is realy stupid. Change it
-        function createShutdownCaller(method: string) {
-            return (instance: Controller): ReturnType<ShutdownMethodType> => {
-                // deno-lint-ignore no-explicit-any
-                (instance as any)[method]();
-            }
-        }
-
-        // TODO: This solution is realy stupid. Change it
-        function createBeforeRenderCaller(method: string) {
-            return (instance: Controller): ReturnType<StartupMethodType> => {
-                // deno-lint-ignore no-explicit-any
-                (instance as any)[method]();
-            }
-        }
-
-        // TODO: This solution is realy stupid. Change it
-        function createAfterRenderCaller(method: string) {
-            return (instance: Controller): ReturnType<StartupMethodType> => {
-                // deno-lint-ignore no-explicit-any
-                (instance as any)[method]();
-            }
-        }
-
-        // TODO: This solution is realy stupid. Change it
-        function createInjectCaller(method: string) {
-            return (instance: Controller, dependency: unknown): ReturnType<InjectMethodType> => {
-                // deno-lint-ignore no-explicit-any
-                (instance as any)[method](dependency);
-            }
-        }
-
-        // TODO: This solution is realy stupid. Change it
-        function createViewActionCaller(method: string) {
-            return (instance: Controller, params: Record<string, string>): ReturnType<ViewActionMethodType> => {
-                // deno-lint-ignore no-explicit-any
-                (instance as any)[method](params);
-            }
-        }
-
-        // TODO: This solution is realy stupid. Change it
-        function createViewRenderCaller(method: string) {
-            return (instance: Controller, params: Record<string, string>): ReturnType<ViewRenderMethodType> => {
-                // deno-lint-ignore no-explicit-any
-                (instance as any)[method](params);
-            }
-        }
-
-        const createSet = (controller: Controller): MethodSetType => {
-            const methodSet: MethodSetType = {
-                inject: new Map(),
-                startup: undefined,
-                action: new Map(),
-                beforeRender: undefined,
-                render: new Map(),
-                afterRender: undefined,
-            };
-
-            // deno-lint-ignore no-explicit-any
-            const allMethods = Object.getOwnPropertyNames(Object.getPrototypeOf(controller)).filter(property => typeof (controller as any)[property] === "function");
-
-            allMethods.forEach(method => {
-                switch (method) {
-                    case 'startup':
-                        methodSet.startup = createStartupCaller(method);
-                        return;
-
-                    case 'shutdown':
-                        methodSet.shutdown = createShutdownCaller(method);
-                        return;
-
-                    case 'beforeRender':
-                        methodSet.beforeRender = createBeforeRenderCaller(method);
-                        return;
-
-                    case 'afterRender':
-                        methodSet.afterRender = createAfterRenderCaller(method);
-                        return;
-                }
-
-                const regex = ControllerManager.#regexp;
-                regex.magicMethod.lastIndex = 0;
-                const match = regex.magicMethod.exec(method);
-
-                if (!match || !match.groups) return;
-
-                const type = match.groups.type;
-                const name = firstLower(match.groups.name);
-
-                switch (type) {
-                    case 'inject':
-                        methodSet.inject.set(name, createInjectCaller(method));
-                        return;
-
-                    case 'action':
-                        methodSet.action.set(name, createViewActionCaller(method));
-                        return;
-
-                    case 'render':
-                        methodSet.render.set(name, createViewRenderCaller(method));
-                        return;
-
-                }
-            });
-
-            return methodSet;
-        }
-
-        return this.#methodSetCache.load(controller.constructor.name, () => createSet(controller));
-    }
-
-
-    async #createInstance(name: string, request: Request): Promise<Controller> {
-        const classObject = await this.#getClassObject(name);
-        const instance = new classObject(request);
-
-        return instance;
-    }
-
-
-    // async #matchController(controller: string): Promise<boolean> {
-    //     return await this.#hasClassObject(controller)
-    // }
-
-
-    // async #matchView(controller: string, view: string): Promise<boolean> {
-    //     const instance = await this.#createInstance(controller);
-    //     const methods = this.#parseMethods(instance);
-
-    //     const hasAction = methods.action.get(view) !== undefined;
-    //     const hasRender = methods.render.get(view) !== undefined;
-
-    //     return hasAction || hasRender;
-    // }
-
-
-    #parseMeta(meta: string) {
-        const [controller, action] = meta.split(":");
-
-        return {
-            controller: firstUpper(controller),
-            action: firstLower(action),
-        };
+    addDependency(name: string, instance: Object) {
+        this.#di.add(name, instance);
     }
 
 
     async createResponse(meta: string, req: Request, params: Record<string, string>): Promise<Response> {
-        const metaParts = this.#parseMeta(meta);
+        const pointer = this.#parseMeta(meta);
+        const paramMap = new Map(Object.entries(params));
 
-        const controllerName = params['controller'] ?? metaParts.controller;
-        const actionName = params['action'] ?? metaParts.action;
+        const controller = ((s) => {
+            if (s) return this.#paramControllerCache.load(s, () => Case.kebabToPascal(s));
+            else return pointer.controller;
+        })(paramMap.get('controller'));
 
-        const instance = await this.#createInstance(controllerName, req);
-        const methods = this.#createMethodSet(instance);
+        const action = ((s) => {
+            if (s) return this.#paramActionCache.load(s, () => Case.kebabToCamel(s));
+            else return pointer.action;
+        })(paramMap.get('action'));
 
-        try {
-            for (const [name, fce] of methods.inject) {
-                await fce(instance, this.#dependecies.get(name));
+        const instance = await this.#loader.createInstanceObject(controller, req);
+        const lifeCycle = this.#callerCache.load(meta, () => new ControllerLifeCycle(instance));
+
+        return lifeCycle.call(this.#di, instance, action, params);
+    }
+
+
+    #parseMeta(meta: string) {
+        return this.#metaCache.load(meta, () => {
+            const [controller, action] = meta.split(":");
+
+            if (!Case.isPascal(controller)) {
+                throw new Error(`Invalid controller name: ${controller}. Case must be Pascal`);
             }
 
-            if (methods.startup) {
-                const fce = methods.startup;
-                await fce(instance);
+            if (!Case.isCamal(action)) {
+                throw new Error(`Invalid action name: ${action}. Case must be Camal`);
             }
 
-            if (methods.action.has(actionName)) {
-                const fce = methods.action.get(actionName)!;
-                await fce(instance, params);
-            }
-
-            if (methods.beforeRender) {
-                const fce = methods.beforeRender;
-                await fce(instance);
-            }
-
-            if (methods.render.has(actionName)) {
-                const fce = methods.render.get(actionName)!;
-                await fce(instance, params);
-            }
-
-            if (methods.afterRender) {
-                const fce = methods.afterRender;
-                await fce(instance);
-            }
-
-        } catch (error) {
-            if (!(error instanceof ControllerExit)) throw new error;
-
-            const exit = error as ControllerExit;
-            const reason = exit.getReason();
-
-            if (reason instanceof Response) {
-                return reason;
-            }
-
-            console.log("Unknown exit output", reason);
-            throw new Error("Unknown exit output");
-        }
-
-        throw new Error("View not found");
+            return {
+                controller,
+                action,
+            };
+        });
     }
 }

@@ -3,21 +3,13 @@
  */
 
 
-import { ControllerExit } from "./ControllerExit.ts";
+import { ControllerLifeCycleExit } from "./ControllerLifeCycleExit.ts";
 import { Status } from "https://deno.land/x/allo_routing@v1.1.3/mod.ts";
 import { FileResponse, JsonResponse, TextResponse } from "https://deno.land/x/allo_responses@v1.0.1/mod.ts";
+import { ControllerEvent } from "./ControllerEvent.ts";
 
 
-class ControllerEvent<C extends Controller, T extends string> extends CustomEvent<{ controller: C }> {
-    constructor(type: T, controller: C) {
-        super(type, {
-            detail: { controller }
-        });
-    }
-}
-
-
-interface IController<T extends string = 'startup' | 'before-render' | 'after-render' | 'shutdown'> {
+interface IController<T extends string = 'startup' | 'render' | 'shutdown'> {
     startup(): Promise<void> | void,
     beforeRender(): Promise<void> | void,
     afterRender(): Promise<void> | void,
@@ -40,22 +32,18 @@ export abstract class Controller extends EventTarget implements IController {
 
 
     startup(): void {
-        this.dispatchEvent(new ControllerEvent('startup', this));
     }
 
 
     beforeRender(): void {
-        this.dispatchEvent(new ControllerEvent('before-render', this));
     }
 
 
     afterRender(): void {
-        this.dispatchEvent(new ControllerEvent('after-render', this));
     }
 
 
     shutdown(): void {
-        this.dispatchEvent(new ControllerEvent('shutdown', this));
     }
 
 
@@ -65,7 +53,7 @@ export abstract class Controller extends EventTarget implements IController {
 
 
     sendResponse(response: Response | Promise<Response>): void {
-        throw new ControllerExit(this, response);
+        throw new ControllerLifeCycleExit(this, response);
     }
 
 
