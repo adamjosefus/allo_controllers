@@ -152,6 +152,7 @@ export class ControllerLifeCycle {
                 throw new error;
             }
 
+            controller.dispatchEvent(new ControllerEvent('shutdown', controller));
             this.#shutdown(controller);
 
             const exit = error as ControllerLifeCycleExit;
