@@ -6,8 +6,8 @@
 import { Controller } from "./Controller.ts";
 import { ControllerEvent } from "./ControllerEvent.ts";
 import { ControllerLifeCycleExit } from "./ControllerLifeCycleExit.ts";
-import { DependencyContainer } from "./DependencyContainer.ts";
-import * as Case from "./helper/Case.ts";
+import { DIContainer } from "./DIContainer.ts";
+import { Case } from "./helper/Case.ts";
 
 type Promisable<T> = T | Promise<T>;
 
@@ -86,7 +86,7 @@ export class ControllerLifeCycle {
             if (!match || !match.groups) return;
 
             const type = match.groups.type;
-            const name = Case.firstLower(match.groups.name);
+            const name = Case.lowerFirst(match.groups.name);
             const key = Case.camelToKebab(name);
 
             switch (type) {
@@ -116,7 +116,7 @@ export class ControllerLifeCycle {
     }
 
 
-    async call(di: DependencyContainer, controller: Controller, action: string, params: Record<string, string>): Promise<Response> {
+    async call(di: DIContainer, controller: Controller, action: string, params: Record<string, string>): Promise<Response> {
         try {
             // Inject
             for (const [name, method] of this.#injects) {
