@@ -7,7 +7,7 @@ Extends the [**Allo Routing**](https://deno.land/x/allo_routing/mod.ts) framewor
 # Controller
 
 ```ts
-// HomepageController.ts
+// ./controllers/HomepageController.ts
 import { Controller } from "../../libs/Controller.ts";
 
 export class HomepageController extends Controller {
@@ -19,7 +19,7 @@ export class HomepageController extends Controller {
 
 
 ```ts
-// main.ts
+// ./main.ts
 import { Server } from "https://deno.land/x/allo_server/mod.ts";
 import { ControllerManager, RouterList } from "https://deno.land/x/allo_controllers/mod.ts";
 
