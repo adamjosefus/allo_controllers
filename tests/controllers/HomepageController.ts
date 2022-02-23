@@ -45,9 +45,9 @@ export class HomepageController extends Controller {
     }
 
 
-    renderFoo() {
-        console.log("Homepage::renderFoo");
+    renderFooBar() {
+        console.log("Homepage::renderFooBar");
         
-        this.sendText("Foo");
+        this.sendText("Foo Bar !!!!");
     }
 }
