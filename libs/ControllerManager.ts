@@ -59,9 +59,6 @@ export class ControllerManager {
         const instance = await this.#loader.createInstanceObject(controller, req);
         const lifeCycle = this.#callerCache.load(meta, () => new ControllerLifeCycle(instance));
 
-        console.log("> instance", instance);
-        console.log("> lifeCycle", lifeCycle);
-
         return lifeCycle.call(this.#di, instance, action, params);
     }
 

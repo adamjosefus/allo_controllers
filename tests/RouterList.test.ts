@@ -21,7 +21,7 @@ const dummyDependency = new DummyDependency();
 
 const controllerDir = join(Deno.cwd(), "./tests/controllers");
 const manager = new ControllerManager(controllerDir);
-manager.addDependency("DummyDependency", dummyDependency);
+manager.addDependency("dummyDependency", dummyDependency);
 
 
 const router = new RouterList(manager);

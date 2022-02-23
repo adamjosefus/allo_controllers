@@ -85,10 +85,10 @@ export class ControllerLifeCycle {
 
             if (!match || !match.groups) return;
 
-            const methodType = match.groups.type;
-            const name = match.groups.name;
+            if (!Case.isPascal(match.groups.name)) return;
 
-            if (!Case.isPascal(name)) return;
+            const name = Case.pascalToCamel(match.groups.name);
+            const methodType = match.groups.type;
 
             switch (methodType) {
                 case 'inject':
@@ -149,7 +149,6 @@ export class ControllerLifeCycle {
 
         } catch (error) {
             if (!(error instanceof ControllerLifeCycleExit)) {
-                console.log(error.message);
                 throw new error;
             }
 

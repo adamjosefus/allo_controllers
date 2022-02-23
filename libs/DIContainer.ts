@@ -8,8 +8,8 @@ export class DIContainer {
 
     // deno-lint-ignore ban-types
     add(name: string, instance: Object): void {
-        if (!Case.isPascal(name)) {
-            throw new Error(`Invalid dependency name: ${name}. Case must be Pascal`);
+        if (!Case.isCamal(name)) {
+            throw new Error(`Invalid dependency name: ${name}. Case must be Camal`);
         }
 
         if (this.#dependecies.has(name)) {
