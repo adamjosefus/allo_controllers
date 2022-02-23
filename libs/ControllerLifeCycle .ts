@@ -17,7 +17,7 @@ export type ViewMethodType = (params: Record<string, string>) => Promisable<void
 type CallerType<T extends (...args: any) => any> = (controller: Controller, ...params: Parameters<T>) => ReturnType<T>;
 
 
-export class ControllerCaller {
+export class ControllerLifeCycle  {
     readonly #regex = {
         magicMethod: /^(?<type>inject|action|render)(?<name>[A-Z][a-zA-Z0-9]*)$/,
     }
@@ -110,5 +110,10 @@ export class ControllerCaller {
             action,
             render,
         }
+    }
+
+
+    async call(action: string): Promise<void> {
+
     }
 }
