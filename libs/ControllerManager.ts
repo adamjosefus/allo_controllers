@@ -297,37 +297,39 @@ export class ControllerManager {
         const controllerName = params['controller'] ?? metaParts.controller;
         const actionName = params['action'] ?? metaParts.action;
 
-        const instance = await this.#createInstance(controllerName, req);
-        const methods = this.#createMethodSet(instance);
+        const controller = await this.#createInstance(controllerName, req);
+        const methods = this.#createMethodSet(controller);
 
         try {
             for (const [name, fce] of methods.inject) {
-                await fce(instance, this.#dependecies.get(name));
+                await fce(controller, this.#dependecies.get(name));
             }
+
+            controller.dispatchEvent(new ControllerEvent('startup', controller));
 
             if (methods.startup) {
                 const fce = methods.startup;
-                await fce(instance);
+                await fce(controller);
             }
 
             if (methods.action.has(actionName)) {
                 const fce = methods.action.get(actionName)!;
-                await fce(instance, params);
+                await fce(controller, params);
             }
 
             if (methods.beforeRender) {
                 const fce = methods.beforeRender;
-                await fce(instance);
+                await fce(controller);
             }
 
             if (methods.render.has(actionName)) {
                 const fce = methods.render.get(actionName)!;
-                await fce(instance, params);
+                await fce(controller, params);
             }
 
             if (methods.afterRender) {
                 const fce = methods.afterRender;
-                await fce(instance);
+                await fce(controller);
             }
 
         } catch (error) {
