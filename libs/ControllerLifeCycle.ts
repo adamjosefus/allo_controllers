@@ -4,6 +4,9 @@
 
 
 import { Controller } from "./Controller.ts";
+import { ControllerEvent } from "./ControllerEvent.ts";
+import { ControllerLifeCycleExit } from "./ControllerLifeCycleExit.ts";
+import { DependencyContainer } from "./DependencyContainer.ts";
 import * as Case from "./helper/Case.ts";
 
 type Promisable<T> = T | Promise<T>;
@@ -17,7 +20,7 @@ export type ViewMethodType = (params: Record<string, string>) => Promisable<void
 type CallerType<T extends (...args: any) => any> = (controller: Controller, ...params: Parameters<T>) => ReturnType<T>;
 
 
-export class ControllerLifeCycle  {
+export class ControllerLifeCycle {
     readonly #regex = {
         magicMethod: /^(?<type>inject|action|render)(?<name>[A-Z][a-zA-Z0-9]*)$/,
     }
@@ -28,13 +31,13 @@ export class ControllerLifeCycle  {
     #afterRender: CallerType<CommonMethodType>;
     #shutdown: CallerType<CommonMethodType>;
 
-    #inject: Map<string, CallerType<InjectMethodType>>;
-    #action: Map<string, CallerType<ViewMethodType>>;
-    #render: Map<string, CallerType<ViewMethodType>>;
+    #injects: Map<string, CallerType<InjectMethodType>>;
+    #actions: Map<string, CallerType<ViewMethodType>>;
+    #renders: Map<string, CallerType<ViewMethodType>>;
 
 
-    constructor(instance: Controller) {
-        const methodNames = this.#parseMethodNames(instance);
+    constructor(controller: Controller) {
+        const methodNames = this.#parseMethodNames(controller);
 
         const common = this.#buildCommon();
         const magic = this.#buildMagic(methodNames);
@@ -44,15 +47,15 @@ export class ControllerLifeCycle  {
         this.#afterRender = common.afterRender;
         this.#shutdown = common.shutdown;
 
-        this.#inject = magic.inject;
-        this.#action = magic.action;
-        this.#render = magic.render;
+        this.#injects = magic.inject;
+        this.#actions = magic.action;
+        this.#renders = magic.render;
     }
 
 
-    #parseMethodNames(instance: Controller): readonly string[] {
+    #parseMethodNames(controller: Controller): readonly string[] {
         // deno-lint-ignore no-explicit-any
-        return Object.getOwnPropertyNames(Object.getPrototypeOf(instance)).filter(property => typeof (instance as any)[property] === "function");
+        return Object.getOwnPropertyNames(Object.getPrototypeOf(controller)).filter(property => typeof (controller as any)[property] === "function");
     }
 
 
@@ -113,7 +116,53 @@ export class ControllerLifeCycle  {
     }
 
 
-    async call(action: string): Promise<void> {
+    async call(di: DependencyContainer, controller: Controller, action: string, params: Record<string, string>): Promise<Response> {
+        try {
+            // Inject
+            for (const [name, method] of this.#injects) {
+                await method(controller, di.get(name))
+            }
 
+            // Startup
+            controller.dispatchEvent(new ControllerEvent('startup', controller));
+            this.#startup(controller);
+
+            // Action
+            if (this.#actions.has(action)) {
+                await this.#actions.get(action)!(controller, params);
+            }
+
+            // Before render
+            this.#beforeRender(controller);
+
+            // Render
+            // TODO: change action value to view value
+            controller.dispatchEvent(new ControllerEvent('render', controller));
+
+            if (this.#renders.has(action)) {
+                await this.#renders.get(action)!(controller, params);
+            }
+
+            // After render
+            this.#afterRender(controller);
+
+
+        } catch (error) {
+            if (!(error instanceof ControllerLifeCycleExit)) throw new error;
+
+            this.#shutdown(controller);
+
+            const exit = error as ControllerLifeCycleExit;
+            const reason = exit.getReason();
+
+            if (reason instanceof Response) {
+                return reason;
+            }
+
+            console.log("Unknown exit output", reason);
+            throw new Error("Unknown exit output");
+        }
+
+        throw new Error("View not found");
     }
 }
