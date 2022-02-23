@@ -85,26 +85,26 @@ export class ControllerLifeCycle {
 
             if (!match || !match.groups) return;
 
-            const type = match.groups.type;
-            const name = Case.lowerFirst(match.groups.name);
-            const key = Case.camelToKebab(name);
+            const methodType = match.groups.type;
+            const name = match.groups.name;
 
-            switch (type) {
+            if (!Case.isPascal(name)) return;
+
+            switch (methodType) {
                 case 'inject':
                     // deno-lint-ignore no-explicit-any
-                    inject.set(key, (c, injcted) => ((c as any)[method] as InjectMethodType)(injcted));
+                    inject.set(name, (c, injcted) => ((c as any)[method] as InjectMethodType)(injcted));
                     return;
 
                 case 'action':
                     // deno-lint-ignore no-explicit-any
-                    action.set(key, (c, params) => ((c as any)[method] as ViewMethodType)(params));
+                    action.set(name, (c, params) => ((c as any)[method] as ViewMethodType)(params));
                     return;
 
                 case 'render':
                     // deno-lint-ignore no-explicit-any
-                    render.set(key, (c, params) => ((c as any)[method] as ViewMethodType)(params));
+                    render.set(name, (c, params) => ((c as any)[method] as ViewMethodType)(params));
                     return;
-
             }
         });
 
@@ -148,7 +148,10 @@ export class ControllerLifeCycle {
 
 
         } catch (error) {
-            if (!(error instanceof ControllerLifeCycleExit)) throw new error;
+            if (!(error instanceof ControllerLifeCycleExit)) {
+                console.log(error.message);
+                throw new error;
+            }
 
             this.#shutdown(controller);
 
