@@ -25,7 +25,7 @@ export class Case {
 
     static kebabToCamel(s: string): string {
         return pipe(
-            Case.pascalToCamel,
+            Case.kebabToPascal,
             Case.lowerFirst,
         )(s);
     }
