@@ -18,7 +18,7 @@ class DummyDependency {
 const dummyDependency = new DummyDependency();
 
 
-const controllerDir = join(Deno.cwd(), "./tests/controllers");
+const controllerDir = join(Deno.cwd(), "./demo/controllers");
 const manager = new ControllerManager(controllerDir);
 manager.addDependency("dummyDependency", dummyDependency);
 
