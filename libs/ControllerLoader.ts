@@ -23,8 +23,6 @@ export class ControllerLoader {
 
 
     async createInstanceObject(name: string, request: Request): Promise<Controller> {
-        // TODO: check case of name
-
         const className = this.#computeClassName(name);
         const classObject = await this.#getClassObject(className);
         const instance = new classObject(request);
