@@ -22,27 +22,24 @@ export class ControllerLoader {
     }
 
 
-    async createInstanceObject(name: string, request: Request): Promise<Controller> {
-        // TODO: check case of name
+    async createInstanceObject(request: Request, controller: string, action: string, params: Record<string, string>): Promise<Controller> {
+        const className = this.#computeClassName(controller);
+        const classObject = await this.#getClassObject(className);
 
-        const classObject = await this.getClassObject(name);
-        const instance = new classObject(request);
-
+        const instance = new classObject(request, action, params);
         return instance;
     }
 
 
-    async getClassObject(name: string): Promise<typeof Controller> {
-        // TODO: check case of name
-
+    async #getClassObject(className: string): Promise<typeof Controller> {
         // Load from cache
-        const cacheKey = name;
+        const cacheKey = className;
         if (this.#classCache.has(cacheKey)) {
             return this.#classCache.load(cacheKey)!;
         }
 
         // Load from file
-        const classObject = await this.#importClassObject(name);
+        const classObject = await this.#importClassObject(className);
 
         // Save to cache
         this.#classCache.save(cacheKey, classObject);
@@ -51,10 +48,8 @@ export class ControllerLoader {
     }
 
 
-    async #importClassObject(name: string): Promise<{ new(): Controller }> {
-        const className = this.#computeClassName(name);
-        const path = this.#computeClassPath(name);
-        
+    async #importClassObject(className: string): Promise<{ new(): Controller }> {
+        const path = this.#computeClassPath(className);
         const module = await import(path);
         const classObject = module[className] as { new(): Controller };
 
@@ -67,10 +62,7 @@ export class ControllerLoader {
     }
 
 
-    #computeClassPath(name: string): string {
-        const className = this.#computeClassName(name);
-        const fileName = `${className}.ts`;
-
-        return join(this.#dir, fileName);
+    #computeClassPath(className: string): string {
+        return join(this.#dir, `${className}.ts`);
     }
 }

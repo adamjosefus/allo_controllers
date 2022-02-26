@@ -132,6 +132,8 @@ export class ControllerLifeCycle {
                 await this.#actions.get(action)!(controller, params);
             }
 
+            const view = controller.getView();
+
             // Before render
             this.#beforeRender(controller);
 
@@ -139,8 +141,8 @@ export class ControllerLifeCycle {
             // TODO: change action value to view value
             controller.dispatchEvent(new ControllerEvent('render', controller));
 
-            if (this.#renders.has(action)) {
-                await this.#renders.get(action)!(controller, params);
+            if (this.#renders.has(view)) {
+                await this.#renders.get(view)!(controller, params);
             }
 
             // After render

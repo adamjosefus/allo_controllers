@@ -35,6 +35,8 @@ export class HomepageController extends Controller {
 
     actionDefault() {
         console.log("Homepage::actionDefault");
+
+        this.setView("fooBar");
     }
 
 

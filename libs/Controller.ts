@@ -24,10 +24,18 @@ interface IController<T extends string = 'startup' | 'render' | 'shutdown'> {
 export abstract class Controller extends EventTarget implements IController {
 
     readonly #request: Request;
+    readonly #action: string;
+    readonly #params: Record<string, string>;
 
-    constructor(request: Request) {
+    #forceView: string | null = null;
+
+
+    constructor(request: Request, action: string, params: Record<string, string>) {
         super();
+
         this.#request = request;
+        this.#action = action;
+        this.#params = params;
     }
 
 
@@ -44,6 +52,16 @@ export abstract class Controller extends EventTarget implements IController {
 
 
     shutdown(): void {
+    }
+
+
+    setView(view: string): void {
+        this.#forceView = view;
+    }
+
+
+    getView(): string {
+        return this.#forceView ?? this.#action;
     }
 
 
