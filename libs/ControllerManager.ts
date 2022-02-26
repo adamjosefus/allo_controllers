@@ -56,9 +56,9 @@ export class ControllerManager {
             else return pointer.action;
         })(paramMap.get('action'));
 
-        const instance = await this.#loader.createInstanceObject(controller, req);
-        const lifeCycle = this.#callerCache.load(meta, () => new ControllerLifeCycle(instance));
+        const instance = await this.#loader.createInstanceObject(req, controller, action, params);
 
+        const lifeCycle = this.#callerCache.load(meta, () => new ControllerLifeCycle(instance));
         return lifeCycle.call(this.#di, instance, action, params);
     }
 

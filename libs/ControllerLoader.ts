@@ -22,11 +22,11 @@ export class ControllerLoader {
     }
 
 
-    async createInstanceObject(name: string, request: Request): Promise<Controller> {
-        const className = this.#computeClassName(name);
+    async createInstanceObject(request: Request, controller: string, action: string, params: Record<string, string>): Promise<Controller> {
+        const className = this.#computeClassName(controller);
         const classObject = await this.#getClassObject(className);
-        const instance = new classObject(request);
 
+        const instance = new classObject(request, action, params);
         return instance;
     }
 
