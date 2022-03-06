@@ -3,7 +3,7 @@
  */
 
 
-import { Cache } from "https://deno.land/x/allo_caching@v1.0.2/mod.ts";
+import { Cache } from "https://deno.land/x/allo_caching@v1.2.0/mod.ts";
 import { ControllerLifeCycle } from "./ControllerLifeCycle.ts";
 import { ControllerLoader } from "./ControllerLoader.ts";
 import { DIContainer } from "./DIContainer.ts";
