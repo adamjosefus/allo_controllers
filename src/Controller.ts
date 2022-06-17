@@ -3,9 +3,9 @@
  */
 
 
+import { FileResponse, JsonResponse, TextResponse } from "./libs/allo_responses.ts";
+import { Status } from "./libs/allo_routing.ts";
 import { ControllerLifeCycleExit } from "./ControllerLifeCycleExit.ts";
-import { Status } from "https://deno.land/x/allo_routing@v1.1.3/mod.ts";
-import { FileResponse, JsonResponse, TextResponse } from "https://deno.land/x/allo_responses@v1.0.1/mod.ts";
 import { ControllerEvent } from "./ControllerEvent.ts";
 
 

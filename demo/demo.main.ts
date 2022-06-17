@@ -3,10 +3,10 @@
  */
 
 
-import { join } from "https://deno.land/std@0.128.0/path/mod.ts";
-import { Server } from "https://deno.land/x/allo_server@v1.0.1/mod.ts";
-import { ControllerManager } from "../libs/ControllerManager.ts";
-import { RouterList } from "../libs/RouterList.ts";
+import { join } from "../src/libs/path.ts";
+import { Server } from "../src/libs/allo_server.ts";
+import { ControllerManager } from "../src/ControllerManager.ts";
+import { RouterList } from "../src/RouterList.ts";
 
 
 class DummyDependency {

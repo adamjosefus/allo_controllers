@@ -3,8 +3,8 @@
  */
 
 
-import { join } from "https://deno.land/std@0.128.0/path/mod.ts";
-import { Cache } from "https://deno.land/x/allo_caching@v1.2.0/mod.ts";
+import { join } from "./libs/path.ts";
+import { Cache } from "./libs/allo_caching.ts";
 import { Controller as AbstractController } from "./Controller.ts";
 
 
