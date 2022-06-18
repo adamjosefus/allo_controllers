@@ -3,8 +3,8 @@
  */
 
 
-import { join } from "./libs/path.ts";
-import { Cache } from "./libs/allo_caching.ts";
+import { join } from "../libs/path.ts";
+import { Cache } from "../libs/allo_caching.ts";
 import { Controller as AbstractController } from "./Controller.ts";
 
 

@@ -3,10 +3,10 @@
  */
 
 
-import { join } from "../src/libs/path.ts";
-import { Server } from "../src/libs/allo_server.ts";
-import { ControllerManager } from "../src/ControllerManager.ts";
-import { RouterList } from "../src/RouterList.ts";
+import { join } from "../libs/path.ts";
+import { Server } from "../libs/allo_server.ts";
+import { ControllerManager } from "../model/ControllerManager.ts";
+import { RouterList } from "../model/RouterList.ts";
 
 
 class DummyDependency {
@@ -24,6 +24,10 @@ manager.addDependency("dummyDependency", dummyDependency);
 
 
 const router = new RouterList(manager);
+router.setError((_req, params) => {
+    return new Response(JSON.stringify(params));
+});
+
 router.add("", () => new Response("Hello World!"));
 router.addController("homepage/<action>", "Homepage:default");
 

@@ -3,7 +3,7 @@
  */
 
 
-import { Cache } from "./libs/allo_caching.ts";
+import { Cache } from "../libs/allo_caching.ts";
 import { ControllerLifeCycle } from "./ControllerLifeCycle.ts";
 import { ControllerLoader } from "./ControllerLoader.ts";
 import { DIContainer } from "./DIContainer.ts";

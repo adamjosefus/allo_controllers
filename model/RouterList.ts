@@ -3,7 +3,7 @@
  */
 
 
-import { RouterList as SuperRouterList, Status, type RouterOptions, type ServeResponseType } from "./libs/allo_routing.ts";
+import { RouterList as SuperRouterList, Status, type RouterOptions, type ServeResponseType } from "../libs/allo_routing.ts";
 import { ControllerManager } from "./ControllerManager.ts";
 
 

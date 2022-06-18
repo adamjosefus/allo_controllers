@@ -1,3 +1,3 @@
-export * from "./libs/RouterList.ts";
-export * from "./libs/Controller.ts";
-export * from "./libs/ControllerManager.ts";
+export * from "./model/RouterList.ts";
+export * from "./model/Controller.ts";
+export * from "./model/ControllerManager.ts";

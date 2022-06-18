@@ -3,8 +3,8 @@
  */
 
 
-import { FileResponse, JsonResponse, TextResponse } from "./libs/allo_responses.ts";
-import { Status } from "./libs/allo_routing.ts";
+import { FileResponse, JsonResponse, TextResponse } from "../libs/allo_responses.ts";
+import { Status } from "../libs/allo_routing.ts";
 import { ControllerLifeCycleExit } from "./ControllerLifeCycleExit.ts";
 import { ControllerEvent } from "./ControllerEvent.ts";
 
