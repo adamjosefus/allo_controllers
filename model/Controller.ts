@@ -5,8 +5,7 @@
 
 import { FileResponse, JsonResponse, TextResponse } from "../libs/allo_responses.ts";
 import { Status } from "../libs/allo_routing.ts";
-import { ControllerLifeCycleExit } from "./ControllerLifeCycleExit.ts";
-import { ControllerEvent } from "./ControllerEvent.ts";
+import { ControllerResponseExit as ResponseExit, ControllerRedirectExit as RedirectExit } from "./ControllerExit.ts";
 
 
 interface IController<T extends string = 'startup' | 'render' | 'shutdown'> {
@@ -14,14 +13,10 @@ interface IController<T extends string = 'startup' | 'render' | 'shutdown'> {
     beforeRender(): Promise<void> | void,
     afterRender(): Promise<void> | void,
     shutdown(): Promise<void> | void,
-
-    addEventListener(type: T, callback: EventListenerOrEventListenerObject | null, options?: AddEventListenerOptions | boolean): void,
-    removeEventListener(type: T, callback: EventListenerOrEventListenerObject | null, options?: EventListenerOptions | boolean): void,
-    dispatchEvent(event: ControllerEvent<Controller, T>): boolean
 }
 
 
-export abstract class Controller extends EventTarget implements IController {
+export abstract class Controller implements IController {
 
     readonly #httpRequest: Request;
     #httpResponse: Response | undefined;
@@ -33,8 +28,6 @@ export abstract class Controller extends EventTarget implements IController {
 
 
     constructor(request: Request, action: string, params: Record<string, string>) {
-        super();
-
         this.#httpRequest = request;
         this.#httpResponse = undefined;
 
@@ -128,7 +121,8 @@ export abstract class Controller extends EventTarget implements IController {
     // #region — Send Response
     sendResponse(response: Response): void {
         this.#httpResponse = response;
-        throw new ControllerLifeCycleExit(this, response);
+
+        throw new ResponseExit(this, response);
     }
 
 
@@ -174,17 +168,22 @@ export abstract class Controller extends EventTarget implements IController {
     }
 
 
-    // // TODO: redirect to pathname
-    // // TODO: redirect to controller meta
-    // redirect(meta: string): void {
-    //     throw new Error("Not implemented");
+    // #redirect(meta: string, params: Record<string, string>, permanent: boolean): void {
+    //     throw new RedirectExit(this, {
+    //         meta,
+    //         params,
+    //         permanent
+    //     })
     // }
 
 
-    // // TODO: redirect to pathname
-    // // TODO: redirect to controller meta
-    // redirectPermanent(meta: string): void {
-    //     throw new Error("Not implemented");
+    // redirect(meta: string, params?: Record<string, string>): void {
+    //     this.#redirect(meta, params ?? {}, false);
+    // }
+
+
+    // redirectPermanent(meta: string, params?: Record<string, string>): void {
+    //     this.#redirect(meta, params ?? {}, true);
     // }
     // #endregion
 }
