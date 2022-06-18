@@ -149,15 +149,17 @@ export class ControllerLifeCycle {
             this.#afterRender(controller);
 
 
-        } catch (error) {
-            if (!(error instanceof ControllerLifeCycleExit)) {
-                throw new error;
+        } catch (errorOrExit) {
+            if (!(errorOrExit instanceof ControllerLifeCycleExit)) {
+                // Retrow error
+                const error = errorOrExit as Error;
+                throw error;
             }
 
             controller.dispatchEvent(new ControllerEvent('shutdown', controller));
             this.#shutdown(controller);
 
-            const exit = error as ControllerLifeCycleExit;
+            const exit = errorOrExit as ControllerLifeCycleExit;
             const reason = exit.getReason();
 
             if (reason instanceof Response) {
