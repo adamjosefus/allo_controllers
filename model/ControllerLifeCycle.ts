@@ -83,7 +83,6 @@ export class ControllerLifeCycle {
             const match = this.#regex.magicMethod.exec(method);
 
             if (!match || !match.groups) return;
-
             if (!Case.isPascal(match.groups.name)) return;
 
             const name = Case.pascalToCamel(match.groups.name);
@@ -116,57 +115,95 @@ export class ControllerLifeCycle {
 
 
     async launch(di: DIContainer, controller: Controller, action: string, params: Record<string, string>): Promise<Response> {
-        try {
-            await this.#launchMethods(di, controller, action, params);
-        } catch (err) {
-            if (!(err instanceof ControllerExit)) {
-                throw err;
-            }
+        let exit: Response | null = null;
 
-            return this.#launchExit(err as ControllerExit, controller);
+        const updateExit = (err: Error) => {
+            if (exit) throw new Error("Http response already sent");
+            exit = this.#caughtExit(err);
         }
 
-        throw new Error(`Container "${controller.constructor.name}" with initial action "${action}" did not return any expected exit.`);
-    }
 
-
-    /**
-     * @throws {ControllerExit}
-     */
-    async #launchMethods(di: DIContainer, controller: Controller, action: string, params: Record<string, string>): Promise<void> {
         // Inject
         for (const [name, method] of this.#injectMethods) {
-            await method(controller, di.get(name))
+            try {
+                await method(controller, di.get(name))
+            } catch (err) {
+                updateExit(err);
+            }
         }
 
+
         // Startup
-        this.#startupMethod(controller);
+        try {
+            await this.#startupMethod(controller);
+        } catch (err) {
+            updateExit(err);
+        }
+
 
         // Action
         if (this.#actionMethods.has(action)) {
             const actionMethod = this.#actionMethods.get(action)!
-            await actionMethod(controller, params);
+
+            try {
+                await actionMethod(controller, params);
+            } catch (err) {
+                updateExit(err);
+            }
         }
 
-        // Before render
+
+        // Before Render
         const view = controller.getView();
-        this.#beforeRenderMethod(controller);
+
+        try {
+            await this.#beforeRenderMethod(controller);
+        } catch (err) {
+            updateExit(err);
+        }
+
 
         // Render
         if (this.#renderMethods.has(view)) {
             const renderMethod = this.#renderMethods.get(view)!;
-            await renderMethod(controller, params);
+            try {
+                await renderMethod(controller, params);
+            } catch (err) {
+                updateExit(err);
+            }
         }
 
-        // After render
-        this.#afterRenderMethod(controller);
+
+        // After Render
+        try {
+            this.#afterRenderMethod(controller);
+        } catch (err) {
+            updateExit(err);
+        }
+
+
+        // Shutdown
+        try {
+            this.#shutdownMethod(controller);
+        } catch (err) {
+            updateExit(err);
+        }
+
+        if (exit === null) {
+            throw new Error(`Container "${controller.constructor.name}" with initial action "${action}" did not return any expected exit.`);
+        }
+
+        return exit;
     }
 
 
-    #launchExit(exit: ControllerExit, controller: Controller): Response {
-        // Close LifeCycle
-        this.#shutdownMethod(controller);
+    #caughtExit(errorOrExit: Error | ControllerExit): Response {
+        if (!(errorOrExit instanceof ControllerExit)) {
+            const error = errorOrExit;
+            throw error;
+        }
 
+        const exit = errorOrExit;
 
         // Process Exit
         if (exit instanceof ControllerResponseExit) {
