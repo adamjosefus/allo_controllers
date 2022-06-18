@@ -34,6 +34,8 @@ server.listen({ port: 8080 });
 
 ## Life Cycle
 ```mermaid
+  %% Looks weird? View on github.
+
   flowchart TB
   A("contructor()") --> B("inject*()")
   B --> C("onStartup() && startup()")
