@@ -3,7 +3,7 @@
  */
 
 
-import { join } from "../libs/path.ts";
+import { join, toFileUrl } from "../libs/path.ts";
 import { Cache } from "../libs/allo_caching.ts";
 import { Controller as AbstractController } from "./Controller.ts";
 
@@ -23,7 +23,7 @@ export class ControllerLoader {
 
 
     async createInstanceObject(request: Request, controller: string, action: string, params: Record<string, string>): Promise<Controller> {
-        const className = this.#computeClassName(controller);
+        const className = this.#computeModuleName(controller);
         const classObject = await this.#getClassObject(className);
 
         const instance = new classObject(request, action, params);
@@ -49,20 +49,22 @@ export class ControllerLoader {
 
 
     async #importClassObject(className: string): Promise<{ new(): Controller }> {
-        const path = this.#computeClassPath(className);
-        const module = await import(path);
+        const path = this.#computeModuleUrl(className);
+        const module = await import(path.toString());
         const classObject = module[className] as { new(): Controller };
 
         return classObject;
     }
 
 
-    #computeClassName(name: string): string {
+    #computeModuleName(name: string): string {
         return `${name}Controller`;
     }
 
 
-    #computeClassPath(className: string): string {
-        return join(this.#dir, `${className}.ts`);
+    #computeModuleUrl(className: string): URL {
+        const path = join(this.#dir, `${className}.ts`);
+
+        return toFileUrl(path);
     }
 }
