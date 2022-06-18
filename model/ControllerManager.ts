@@ -31,10 +31,6 @@ export class ControllerManager {
 
 
     constructor(dir: string) {
-        if (!Deno.lstatSync(dir).isDirectory) {
-            throw new Error(`Invalid directory: ${dir}`);
-        }
-
         this.#loader = new ControllerLoader(dir);
         this.#di = new DIContainer()
     }
