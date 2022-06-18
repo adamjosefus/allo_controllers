@@ -18,7 +18,13 @@ export class ControllerLoader {
 
 
     constructor(dir: string) {
-        this.#dir = dir;
+        this.#dir = ((s) => {
+            if (!Deno.lstatSync(dir).isDirectory) {
+                throw new Error(`Invalid directory: ${dir}`);
+            }
+
+            return s;
+        })(Deno.realPathSync(dir));
     }
 
 
