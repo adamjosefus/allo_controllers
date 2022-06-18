@@ -6,16 +6,15 @@
 import { Controller } from "./Controller.ts";
 
 
-type Promisable<T> = T | Promise<T>;
-type ExitValueType = Promisable<Response>;
+type ExitReason = Response;
 
 
 export class ControllerLifeCycleExit extends Error {
 
     readonly #controller: Controller;
-    readonly reason: ExitValueType;
+    readonly reason: ExitReason;
 
-    constructor(controller: Controller, reason: ExitValueType) {
+    constructor(controller: Controller, reason: ExitReason) {
         super(`Controller Exit - This exception should be caught.`);
 
         this.#controller = controller;
@@ -23,7 +22,7 @@ export class ControllerLifeCycleExit extends Error {
     }
 
 
-    getReason(): ExitValueType {
+    getReason(): ExitReason {
         return this.reason;
     }
 
