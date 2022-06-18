@@ -28,8 +28,8 @@ router.setError((_req, params) => {
     return new Response(JSON.stringify(params));
 });
 
-router.add("", () => new Response("Hello World!"));
-router.addController("homepage/<action>", "Homepage:default");
+// router.add("", () => new Response("Hello World!"));
+router.addController("[[<controller>/]<action>]", "Homepage:default");
 
 
 const server = new Server(router);
