@@ -39,7 +39,7 @@ export class ControllerLifeCycle {
         const methodNames = this.#parseMethodNames(controller);
 
         const common = this.#buildCommon();
-        const magic = this.#buildMagic(methodNames);
+        const magic = this.#buildMagicMethods(methodNames);
 
         this.#startupMethod = common.startup;
         this.#beforeRenderMethod = common.beforeRender;
@@ -73,7 +73,7 @@ export class ControllerLifeCycle {
     }
 
 
-    #buildMagic(methodNames: readonly string[]) {
+    #buildMagicMethods(methodNames: readonly string[]) {
         const inject: Map<string, CallerType<InjectMethodType>> = new Map();
         const action: Map<string, CallerType<ViewMethodType>> = new Map();
         const render: Map<string, CallerType<ViewMethodType>> = new Map();
