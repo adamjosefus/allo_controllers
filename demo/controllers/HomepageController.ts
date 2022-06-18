@@ -1,4 +1,4 @@
-import { Controller } from "../../libs/Controller.ts";
+import { Controller } from "../../mod.ts";
 
 
 export class HomepageController extends Controller {

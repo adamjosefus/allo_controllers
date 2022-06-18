@@ -3,10 +3,10 @@
  */
 
 
-import { join } from "https://deno.land/std@0.128.0/path/mod.ts";
-import { Server } from "https://deno.land/x/allo_server@v1.0.1/mod.ts";
-import { ControllerManager } from "../libs/ControllerManager.ts";
-import { RouterList } from "../libs/RouterList.ts";
+import { join } from "../libs/path.ts";
+import { Server } from "../libs/allo_server.ts";
+import { ControllerManager } from "../model/ControllerManager.ts";
+import { RouterList } from "../model/RouterList.ts";
 
 
 class DummyDependency {
@@ -24,6 +24,10 @@ manager.addDependency("dummyDependency", dummyDependency);
 
 
 const router = new RouterList(manager);
+router.setError((_req, params) => {
+    return new Response(JSON.stringify(params));
+});
+
 router.add("", () => new Response("Hello World!"));
 router.addController("homepage/<action>", "Homepage:default");
 
