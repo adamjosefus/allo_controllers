@@ -31,7 +31,7 @@ export class ControllerManager {
 
 
     constructor(dir: string) {
-        console.log({dir});
+        console.log("ControllerManager dir", dir);
         
         if (!Deno.lstatSync(dir).isDirectory) {
             throw new Error(`Invalid directory: ${dir}`);
