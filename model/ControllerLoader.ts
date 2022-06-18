@@ -63,6 +63,11 @@ export class ControllerLoader {
 
 
     #computeClassPath(className: string): string {
-        return join(this.#dir, `${className}.ts`);
+        const path = join(this.#dir, `${className}.ts`);
+
+        console.log(this.#dir, `${className}.ts`);
+        console.log("ControllerLoader path", path);
+
+        return path;
     }
 }
