@@ -4,8 +4,7 @@
 
 
 import { Controller } from "./Controller.ts";
-import { ControllerEvent } from "./ControllerEvent.ts";
-import { ControllerLifeCycleExit } from "./ControllerLifeCycleExit.ts";
+import { ControllerExit, ControllerResponseExit } from "./ControllerExit.ts";
 import { DIContainer } from "./DIContainer.ts";
 import { Case } from "./helper/Case.ts";
 
@@ -21,19 +20,19 @@ type CallerType<T extends (...args: any) => any> = (controller: Controller, ...p
 
 
 export class ControllerLifeCycle {
+
     readonly #regex = {
         magicMethod: /^(?<type>inject|action|render)(?<name>[A-Z][a-zA-Z0-9]*)$/,
     }
 
+    #startupMethod: CallerType<CommonMethodType>;
+    #beforeRenderMethod: CallerType<CommonMethodType>;
+    #afterRenderMethod: CallerType<CommonMethodType>;
+    #shutdownMethod: CallerType<CommonMethodType>;
 
-    #startup: CallerType<CommonMethodType>;
-    #beforeRender: CallerType<CommonMethodType>;
-    #afterRender: CallerType<CommonMethodType>;
-    #shutdown: CallerType<CommonMethodType>;
-
-    #injects: Map<string, CallerType<InjectMethodType>>;
-    #actions: Map<string, CallerType<ViewMethodType>>;
-    #renders: Map<string, CallerType<ViewMethodType>>;
+    #injectMethods: Map<string, CallerType<InjectMethodType>>;
+    #actionMethods: Map<string, CallerType<ViewMethodType>>;
+    #renderMethods: Map<string, CallerType<ViewMethodType>>;
 
 
     constructor(controller: Controller) {
@@ -42,14 +41,14 @@ export class ControllerLifeCycle {
         const common = this.#buildCommon();
         const magic = this.#buildMagic(methodNames);
 
-        this.#startup = common.startup;
-        this.#beforeRender = common.beforeRender;
-        this.#afterRender = common.afterRender;
-        this.#shutdown = common.shutdown;
+        this.#startupMethod = common.startup;
+        this.#beforeRenderMethod = common.beforeRender;
+        this.#afterRenderMethod = common.afterRender;
+        this.#shutdownMethod = common.shutdown;
 
-        this.#injects = magic.inject;
-        this.#actions = magic.action;
-        this.#renders = magic.render;
+        this.#injectMethods = magic.inject;
+        this.#actionMethods = magic.action;
+        this.#renderMethods = magic.render;
     }
 
 
@@ -116,60 +115,69 @@ export class ControllerLifeCycle {
     }
 
 
-    async call(di: DIContainer, controller: Controller, action: string, params: Record<string, string>): Promise<Response> {
+    async launch(di: DIContainer, controller: Controller, action: string, params: Record<string, string>): Promise<Response> {
         try {
-            // Inject
-            for (const [name, method] of this.#injects) {
-                await method(controller, di.get(name))
+            await this.#launchMethods(di, controller, action, params);
+        } catch (err) {
+            if (!(err instanceof ControllerExit)) {
+                throw err;
             }
 
-            // Startup
-            controller.dispatchEvent(new ControllerEvent('startup', controller));
-            this.#startup(controller);
-
-            // Action
-            if (this.#actions.has(action)) {
-                await this.#actions.get(action)!(controller, params);
-            }
-
-            const view = controller.getView();
-
-            // Before render
-            this.#beforeRender(controller);
-
-            // Render
-            // TODO: change action value to view value
-            controller.dispatchEvent(new ControllerEvent('render', controller));
-
-            if (this.#renders.has(view)) {
-                await this.#renders.get(view)!(controller, params);
-            }
-
-            // After render
-            this.#afterRender(controller);
-
-
-        } catch (errorOrExit) {
-            if (!(errorOrExit instanceof ControllerLifeCycleExit)) {
-                // Retrow error
-                const error = errorOrExit as Error;
-                throw error;
-            }
-
-            controller.dispatchEvent(new ControllerEvent('shutdown', controller));
-            this.#shutdown(controller);
-
-            const exit = errorOrExit as ControllerLifeCycleExit;
-            const reason = exit.getReason();
-
-            if (reason instanceof Response) {
-                return reason;
-            }
-
-            console.log("Unknown exit output", reason);
-            throw new Error("Unknown exit output");
+            return this.#launchExit(err as ControllerExit, controller);
         }
 
-        throw new Error("View not found");
+        throw new Error(`Container "${controller.constructor.name}" with initial action "${action}" did not return any expected exit.`);
+    }
+
+
+    /**
+     * @throws {ControllerExit}
+     */
+    async #launchMethods(di: DIContainer, controller: Controller, action: string, params: Record<string, string>): Promise<void> {
+        // Inject
+        for (const [name, method] of this.#injectMethods) {
+            await method(controller, di.get(name))
+        }
+
+        // Startup
+        this.#startupMethod(controller);
+
+        // Action
+        if (this.#actionMethods.has(action)) {
+            const actionMethod = this.#actionMethods.get(action)!
+            await actionMethod(controller, params);
+        }
+
+        // Before render
+        const view = controller.getView();
+        this.#beforeRenderMethod(controller);
+
+        // Render
+        if (this.#renderMethods.has(view)) {
+            const renderMethod = this.#renderMethods.get(view)!;
+            await renderMethod(controller, params);
+        }
+
+        // After render
+        this.#afterRenderMethod(controller);
+    }
+
+
+    #launchExit(exit: ControllerExit, controller: Controller): Response {
+        // Close LifeCycle
+        this.#shutdownMethod(controller);
+
+
+        // Process Exit
+        if (exit instanceof ControllerResponseExit) {
+            const response = (exit as ControllerResponseExit).getReason();
+            return response;
+        }
+
+        // if (exit instanceof ControllerRedirectExit) {
+        //     const { meta, params, permanent } = (exit as ControllerRedirectExit).getReason();
+        // }
+
+        throw new Error("Unknown exit output");
     }
 }
