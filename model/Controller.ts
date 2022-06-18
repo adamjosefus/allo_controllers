@@ -100,7 +100,7 @@ export abstract class Controller extends EventTarget implements IController {
 
 
     /**
-     * Get name of requested view of controller.
+     * Get name of requested view of controller. If it is not mannually set, then it is the same as action.
      */
     getView(): string {
         return this.#forceView ?? this.#action;
