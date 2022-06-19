@@ -173,7 +173,7 @@ export class ControllerLifeCycle {
                 await callback();
             } catch (err) {
                 if (exit) throw new Error("Http response already sent");
-                exit = this.#caughtExit(err);
+                exit = this.#processExit(err);
             }
         }
 
@@ -185,7 +185,7 @@ export class ControllerLifeCycle {
     }
 
 
-    #caughtExit(errorOrExit: Error | ControllerExit): Response {
+    #processExit(errorOrExit: ControllerExit | Error): Response {
         if (!(errorOrExit instanceof ControllerExit)) {
             const error = errorOrExit;
             throw error;
