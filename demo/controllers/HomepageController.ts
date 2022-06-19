@@ -33,17 +33,15 @@ export class HomepageController extends Controller {
     }
 
 
-    // actionDefault() {
-    //     console.log("Homepage::actionDefault");
-
-    //     this.setView("fooBar");
-    // }
+    actionDefault() {
+        console.log("Homepage::actionDefault");
+        this.redirect("fooBar");
+    }
 
 
     renderDefault() {
         console.log("Homepage::renderDefault");
-        
-        this.sendText("Default");
+        this.sendText("Default page");
     }
 
 
