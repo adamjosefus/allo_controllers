@@ -25,6 +25,8 @@ manager.addDependency("dummyDependency", dummyDependency);
 
 const router = new RouterList(manager);
 router.setError((_req, params) => {
+    console.error(params);
+    
     return new Response(JSON.stringify(params));
 });
 
