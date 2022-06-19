@@ -32,5 +32,4 @@ export class RouterList extends SuperRouterList {
 
         this.add(mask, serveResponse);
     }
-
 }

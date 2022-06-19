@@ -30,8 +30,8 @@ router.setError((_req, params) => {
     return new Response(JSON.stringify(params));
 });
 
-
 router.addController("[[<controller>/]<action>]", "Homepage:default");
+
 
 const port = 8080;
 const server = new Server(router);
