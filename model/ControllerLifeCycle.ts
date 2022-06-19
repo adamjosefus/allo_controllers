@@ -4,7 +4,7 @@
 
 
 import { Controller } from "./Controller.ts";
-import { ControllerExit, ControllerResponseExit } from "./ControllerExit.ts";
+import { ControllerExit, ControllerResponseExit, ControllerRedirectExit } from "./ControllerExit.ts";
 import { DIContainer } from "./DIContainer.ts";
 import { Case } from "./helper/Case.ts";
 
@@ -38,7 +38,7 @@ export class ControllerLifeCycle {
     constructor(controller: Controller) {
         const methodNames = this.#parseMethodNames(controller);
 
-        const common = this.#buildCommon();
+        const common = this.#buildCommonMethods();
         const magic = this.#buildMagicMethods(methodNames);
 
         this.#startupMethod = common.startup;
@@ -58,7 +58,7 @@ export class ControllerLifeCycle {
     }
 
 
-    #buildCommon() {
+    #buildCommonMethods() {
         const startup: CallerType<CommonMethodType> = (c) => c.startup();
         const beforeRender: CallerType<CommonMethodType> = (c) => c.beforeRender();
         const afterRender: CallerType<CommonMethodType> = (c) => c.afterRender();
@@ -199,9 +199,14 @@ export class ControllerLifeCycle {
             return response;
         }
 
-        // if (exit instanceof ControllerRedirectExit) {
-        //     const { meta, params, permanent } = (exit as ControllerRedirectExit).getReason();
-        // }
+        if (exit instanceof ControllerRedirectExit) {
+            const { meta, params, permanent } = (exit as ControllerRedirectExit).getReason();
+
+            console.log({
+                meta, params, permanent
+            });
+
+        }
 
         throw new Error("Unknown exit output");
     }
