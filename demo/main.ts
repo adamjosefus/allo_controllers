@@ -30,11 +30,10 @@ router.setError((_req, params) => {
     return new Response(JSON.stringify(params));
 });
 
-// router.add("", () => new Response("Hello World!"));
+
 router.addController("[[<controller>/]<action>]", "Homepage:default");
 
-
+const port = 8080;
 const server = new Server(router);
-server.listen({ port: 8080 });
-
-console.log("http://localhost:8080");
+server.listen({ port });
+console.log(`http://localhost:${port}`);
