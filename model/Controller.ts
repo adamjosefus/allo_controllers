@@ -5,7 +5,10 @@
 
 import { FileResponse, JsonResponse, TextResponse } from "../libs/allo_responses.ts";
 import { Status } from "../libs/allo_routing.ts";
-import { ControllerResponseExit as ResponseExit, ControllerRedirectExit as RedirectExit } from "./ControllerExit.ts";
+import {
+    ControllerResponseExit as ResponseExit,
+    ControllerRedirectExit as RedirectExit
+} from "./ControllerExit.ts";
 
 
 interface IController<T extends string = 'startup' | 'render' | 'shutdown'> {
@@ -168,22 +171,22 @@ export abstract class Controller implements IController {
     }
 
 
-    // #redirect(meta: string, params: Record<string, string>, permanent: boolean): void {
-    //     throw new RedirectExit(this, {
-    //         meta,
-    //         params,
-    //         permanent
-    //     })
-    // }
+    #redirect(meta: string, params: Record<string, string>, permanent: boolean): void {
+        throw new RedirectExit(this, {
+            meta,
+            params,
+            permanent
+        })
+    }
 
 
-    // redirect(meta: string, params?: Record<string, string>): void {
-    //     this.#redirect(meta, params ?? {}, false);
-    // }
+    redirect(meta: string, params?: Record<string, string>): void {
+        this.#redirect(meta, params ?? {}, false);
+    }
 
 
-    // redirectPermanent(meta: string, params?: Record<string, string>): void {
-    //     this.#redirect(meta, params ?? {}, true);
-    // }
+    redirectPermanent(meta: string, params?: Record<string, string>): void {
+        this.#redirect(meta, params ?? {}, true);
+    }
     // #endregion
 }

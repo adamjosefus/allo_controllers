@@ -114,79 +114,67 @@ export class ControllerLifeCycle {
     }
 
 
+    #createMethodCallbacks(di: DIContainer, controller: Controller, action: string, params: Record<string, string>): readonly (() => Promise<unknown>)[] {
+        return [
+            // Inject
+            [...this.#injectMethods.entries()].map(([name, method]) => async () => {
+                const injected = di.get(name);
+                await method(controller, injected)
+            }),
+
+            // Startup
+            [async () => {
+                const method = this.#startupMethod;
+                await method(controller);
+            }],
+
+            // Action
+            [async () => {
+                const method = this.#actionMethods.get(action)
+                if (!method) return;
+                await method(controller, params);
+            }],
+
+            // Before Render
+            [async () => {
+                const method = this.#beforeRenderMethod;
+                await method(controller);
+            }],
+
+            // Render
+            [async () => {
+                const view = controller.getView();
+                const method = this.#renderMethods.get(view);
+                if (!method) return;
+                await method(controller, params);
+            }],
+
+            // After Render
+            [async () => {
+                const method = this.#afterRenderMethod;
+                await method(controller);
+            }],
+
+            // Shutdown
+            [async () => {
+                const method = this.#shutdownMethod;
+                await method(controller);
+            }],
+        ].flat();
+    }
+
+
     async launch(di: DIContainer, controller: Controller, action: string, params: Record<string, string>): Promise<Response> {
+        const callbacks = this.#createMethodCallbacks(di, controller, action, params);
         let exit: Response | null = null;
 
-        const updateExit = (err: Error) => {
-            if (exit) throw new Error("Http response already sent");
-            exit = this.#caughtExit(err);
-        }
-
-
-        // Inject
-        for (const [name, method] of this.#injectMethods) {
+        for (const callback of callbacks) {
             try {
-                await method(controller, di.get(name))
+                await callback();
             } catch (err) {
-                updateExit(err);
+                if (exit) throw new Error("Http response already sent");
+                exit = this.#caughtExit(err);
             }
-        }
-
-
-        // Startup
-        try {
-            await this.#startupMethod(controller);
-        } catch (err) {
-            updateExit(err);
-        }
-
-
-        // Action
-        if (this.#actionMethods.has(action)) {
-            const actionMethod = this.#actionMethods.get(action)!
-
-            try {
-                await actionMethod(controller, params);
-            } catch (err) {
-                updateExit(err);
-            }
-        }
-
-
-        // Before Render
-        const view = controller.getView();
-
-        try {
-            await this.#beforeRenderMethod(controller);
-        } catch (err) {
-            updateExit(err);
-        }
-
-
-        // Render
-        if (this.#renderMethods.has(view)) {
-            const renderMethod = this.#renderMethods.get(view)!;
-            try {
-                await renderMethod(controller, params);
-            } catch (err) {
-                updateExit(err);
-            }
-        }
-
-
-        // After Render
-        try {
-            this.#afterRenderMethod(controller);
-        } catch (err) {
-            updateExit(err);
-        }
-
-
-        // Shutdown
-        try {
-            this.#shutdownMethod(controller);
-        } catch (err) {
-            updateExit(err);
         }
 
         if (exit === null) {
