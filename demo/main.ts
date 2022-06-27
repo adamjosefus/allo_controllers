@@ -15,12 +15,10 @@ class DummyDependency {
 }
 
 
-const dummyDependency = new DummyDependency();
-
 
 const controllerDir = join(Deno.cwd(), "./demo/controllers");
 const manager = new ControllerManager(controllerDir);
-manager.addDependency("dummyDependency", dummyDependency);
+manager.addDependency("dummyDependency", new DummyDependency());
 
 
 const router = new RouterList(manager);
